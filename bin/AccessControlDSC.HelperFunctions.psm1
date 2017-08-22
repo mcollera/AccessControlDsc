@@ -1,4 +1,4 @@
-function Resolve-Identity
+﻿function Resolve-Identity
 {
     <#
     .SYNOPSIS
@@ -26,11 +26,11 @@ function Resolve-Identity
 
             if ($Identity -match '^S-\d-(\d+-){1,14}\d+$')
             {
-                [System.Security.Principal.SecurityIdentifier]$Identity = $Identity
+                $Identity = $Identity -as [System.Security.Principal.SecurityIdentifier]
             }
             else
             {
-                 [System.Security.Principal.NTAccount]$Identity = $Identity
+                $Identity = $Identity -as [System.Security.Principal.NTAccount]
             }
 
             $SID = $Identity.Translate([System.Security.Principal.SecurityIdentifier])

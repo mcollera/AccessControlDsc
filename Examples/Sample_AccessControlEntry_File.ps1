@@ -1,44 +1,82 @@
-# Needed for ServiceAccessRights enumeration
-Import-Module AccessControlDsc
+﻿param(
+    [parameter()]
+    [string]
+    $TargetName = '192.0.0.66',
 
-Configuration TestAceResource 
+    [parameter()]
+    [string]
+    $OutputPath = 'C:\temp\mof'
+)
+
+[DSCLocalConfigurationManager()]
+Configuration RpsConfiguration
 {
-    Import-DscResource -Module AccessControlDsc
-
-    $TestFolder = "C:\powershell\deleteme\dsc_test"
-
-    Node 'localhost' 
+    Node $TargetName
     {
-        File TestFolder
-        {
-            Ensure          = "Present"
-            Type            = "Directory"
-            DestinationPath = $TestFolder
-        }
+        Settings   
+        {                              
+            RebootNodeIfNeeded = $TRUE
+            ConfigurationModeFrequencyMins = 15
+            ConfigurationMode = 'ApplyAndAutoCorrect'
+        } 
+    }
+}
 
-        # Here's where resource provider to control modifying ACL protection would go
-        AccessControlEntry EveryoneModifyTestFolder 
-        {
-            Ensure     = "Present"
-            Path       = $TestFolder
-            AceType    = "AccessAllowed"
-            ObjectType = "Directory"
-            AccessMask = ([System.Security.AccessControl.FileSystemRights]::Modify)
-            Principal  = "Everyone"
-            DependsOn  = "[File]TestFolder"
-        }
 
-        AccessControlEntry EveryoneAuditTestFolder 
+configuration Sample_AccessControl
+{
+    Import-DscResource -ModuleName AccessControlDsc
+    node $TargetName
+    {
+
+        RegistryAccessEntry Test
         {
-            Ensure       = "Present"
-            Path         = $TestFolder
-            AceType      = "SystemAudit"
-            ObjectType   = "Directory"
-            AccessMask   = ([System.Security.AccessControl.FileSystemRights]::FullControl)
-            Principal    = "Everyone"
-            AuditSuccess = $true
-            AuditFailure = $true
-            DependsOn    = "[File]TestFolder"
+            Path = "HKLM:\Software\Test"
+            AccessControlList = @(
+                AccessControlList
+                {
+                    Principal = "Everyone"
+                    ForcePrincipal = $true
+                    AccessControlEntry = @(
+                        AccessControlEntry
+                        {
+                            AccessControlType = 'Allow'
+                            Rights = 'CreateSubKey','ChangePermissions','Delete'
+                            Inheritance = 'This Key Only'
+                        }
+                        AccessControlEntry
+                        {
+                            AccessControlType = 'Allow'
+                            Rights = 'FullControl'
+                            Inheritance = 'SubKeys Only'
+                        }
+                    )               
+                }
+                AccessControlList
+                {
+                    Principal = "Users"
+                    ForcePrincipal = $false
+                    AccessControlEntry = @(
+                        AccessControlEntry
+                        {
+                            AccessControlType = 'Allow'
+                            Rights = 'CreateSubKey','ChangePermissions','Delete'
+                            Inheritance = 'This Key Only'
+                        }
+                    )               
+                }
+            )
         }
     }
 }
+
+$credential = $(New-Object System.Management.Automation.PSCredential("powerstig\administrator", $(ConvertTo-SecureString '!A@S3d4f5g6h7j8k9l' -AsPlainText -Force)))
+
+$session = New-PSSession -ComputerName $TargetName -Credential $credential
+$null = Copy-Item -Path 'C:\Program Files\WindowsPowerShell\Modules\AccessControlDsc' -Destination "C:\Program Files\WindowsPowerShell\Modules" -ToSession $session -Recurse -Force -ErrorAction Stop
+$null = Remove-PSSession -Session $session
+
+RpsConfiguration -OutputPath $OutputPath
+Sample_AccessControl -OutputPath $OutputPath
+Set-DscLocalConfigurationManager -Path $OutputPath -ComputerName $TargetName -Credential $credential -Force
+Start-DscConfiguration -Path $OutputPath -ComputerName $TargetName -Credential $credential -Wait -Force
