@@ -1,7 +1,7 @@
 ﻿param(
     [parameter()]
     [string]
-    $TargetName = '192.0.0.66',
+    $TargetName = '192.168.1.41',
 
     [parameter()]
     [string]
@@ -9,7 +9,7 @@
 )
 
 [DSCLocalConfigurationManager()]
-Configuration RpsConfiguration
+Configuration LCMConfig
 {
     Node $TargetName
     {
@@ -23,45 +23,44 @@ Configuration RpsConfiguration
 }
 
 
-configuration Sample_AccessControl
+configuration Sample_NTFSAccessControl
 {
     Import-DscResource -ModuleName AccessControlDsc
     node $TargetName
     {
-
-        RegistryAccessEntry Test
+        NTFSAccessEntry Test
         {
-            Path = "HKLM:\Software\Test"
+            Path = "c:\test\sample.txt"
             AccessControlList = @(
-                AccessControlList
+                NTFSAccessControlList
                 {
                     Principal = "Everyone"
                     ForcePrincipal = $true
                     AccessControlEntry = @(
-                        AccessControlEntry
+                        NTFSAccessControlEntry
                         {
                             AccessControlType = 'Allow'
-                            Rights = 'CreateSubKey','ChangePermissions','Delete'
-                            Inheritance = 'This Key Only'
+                            FileSystemRights = 'Modify'
+                            InheritanceFlags = 'ContainerInherit'
                         }
-                        AccessControlEntry
+                        NTFSAccessControlEntry
                         {
                             AccessControlType = 'Allow'
-                            Rights = 'FullControl'
-                            Inheritance = 'SubKeys Only'
+                            FileSystemRights = 'FullControl'
+                            InheritanceFlags = 'None'
                         }
                     )               
                 }
-                AccessControlList
+                NTFSAccessControlList
                 {
                     Principal = "Users"
                     ForcePrincipal = $false
                     AccessControlEntry = @(
-                        AccessControlEntry
+                        NTFSAccessControlEntry
                         {
                             AccessControlType = 'Allow'
-                            Rights = 'CreateSubKey','ChangePermissions','Delete'
-                            Inheritance = 'This Key Only'
+                            FileSystemRights = 'FullControl'
+                            InheritanceFlags =  'None'
                         }
                     )               
                 }
@@ -70,13 +69,13 @@ configuration Sample_AccessControl
     }
 }
 
-$credential = $(New-Object System.Management.Automation.PSCredential("powerstig\administrator", $(ConvertTo-SecureString '!A@S3d4f5g6h7j8k9l' -AsPlainText -Force)))
+$credential = $(New-Object System.Management.Automation.PSCredential("administrator", $(ConvertTo-SecureString '!A@S3d4f5g6h7j8k' -AsPlainText -Force)))
 
 $session = New-PSSession -ComputerName $TargetName -Credential $credential
-$null = Copy-Item -Path 'C:\Program Files\WindowsPowerShell\Modules\AccessControlDsc' -Destination "C:\Program Files\WindowsPowerShell\Modules" -ToSession $session -Recurse -Force -ErrorAction Stop
+$null = Copy-Item -Path "C:\Users\Administrator\Documents\WindowsPowerShell\Modules\AccessControlDsc" -Destination "C:\Program Files\WindowsPowerShell\Modules" -ToSession $session -Recurse -Force -ErrorAction Stop
 $null = Remove-PSSession -Session $session
 
-RpsConfiguration -OutputPath $OutputPath
-Sample_AccessControl -OutputPath $OutputPath
+LCMConfig -OutputPath $OutputPath
+Sample_NTFSAccessControl -OutputPath $OutputPath
 Set-DscLocalConfigurationManager -Path $OutputPath -ComputerName $TargetName -Credential $credential -Force
 Start-DscConfiguration -Path $OutputPath -ComputerName $TargetName -Credential $credential -Wait -Force
