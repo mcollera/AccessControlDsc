@@ -32,6 +32,7 @@ configuration Sample_AccessControl
         RegistryAccessEntry Test
         {
             Path = "HKLM:\Software\Test"
+            Force = $false
             AccessControlList = @(
                 AccessControlList
                 {
@@ -50,7 +51,7 @@ configuration Sample_AccessControl
                             AccessControlType = 'Allow'
                             Rights = 'FullControl'
                             Inheritance = 'SubKeys Only'
-                            Ensure = 'Present'
+                            Ensure = 'Absent'
                         }
                     )               
                 }

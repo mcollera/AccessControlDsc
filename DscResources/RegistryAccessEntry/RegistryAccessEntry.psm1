@@ -112,6 +112,7 @@ Function Set-TargetResource
         $Results = Get-RegistryResults -Principal $Principal -ACL $currentAcl
         $Expected = $Results.Rules
         $ToBeRemoved = $Results.ToBeRemoved
+        $AbsentToBeRemoved = $Results.Absent
 
         foreach($Rule in $Expected)
         {
@@ -119,6 +120,16 @@ Function Set-TargetResource
             {
                 $currentAcl.AddAccessRule($Rule.Rule)
             }
+        }
+
+        $isInherited = $AbsentToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
+        if($isInherited -gt 0)
+        {
+            $currentAcl.SetAccessRuleProtection($true,$true)
+        }
+        foreach($Rule in $AbsentToBeRemoved.Rule)
+        {
+            $currentAcl.RemoveAccessRule($Rule)
         }
 
         if($Principal.ForcePrincipal)
@@ -171,6 +182,7 @@ Function Test-TargetResource
         $Results = Get-RegistryResults -Principal $Principal -ACL $currentAcl
         $Expected = $Results.Rules
         $ToBeRemoved = $Results.ToBeRemoved
+        $AbsentToBeRemoved = $Results.Absent
 
         foreach($Rule in $Expected)
         {
@@ -178,6 +190,11 @@ Function Test-TargetResource
             {
                 return $false
             }
+        }
+
+        if($AbsentToBeRemoved.Count)
+        {
+            return $false
         }
 
         if($Principal.ForcePrincipal)
@@ -207,7 +224,7 @@ Function Get-RegistryResults
     $Identity = Resolve-Identity -Identity $Principal.Principal
     $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
 
-    [System.Security.AccessControl.RegistryAccessRule[]]$refrenceObject = $null
+    $refrenceObject = @()
 
     foreach($ace in $Principal.AccessControlEntry)
     {
@@ -218,8 +235,11 @@ Function Get-RegistryResults
         }
         $Inheritance = Get-RegistryRuleInheritenceFlags -Inheritance $ace.Inheritance
 
-        $refrenceObject += [System.Security.AccessControl.RegistryAccessRule]::new($IdentityRef, $accessMask, $Inheritance.InheritanceFlag, $Inheritance.PropagationFlag, $ace.AccessControlType)
-
+        $rule = [PSCustomObject]@{
+            Rules = [System.Security.AccessControl.RegistryAccessRule]::new($IdentityRef, $accessMask, $Inheritance.InheritanceFlag, $Inheritance.PropagationFlag, $ace.AccessControlType)
+            Ensure = $ace.Ensure
+        }
+        $refrenceObject += $rule
     }
 
     $actualAce = $ACL.Access.Where({$_.IdentityReference -eq $Identity.Name})
@@ -232,7 +252,7 @@ Function Compare-RegistryRules
     param
     (
         [Parameter(Mandatory = $true)]
-        [System.Security.AccessControl.RegistryAccessRule[]]
+        [PSCustomObject[]]
         $Expected,
 
         [Parameter()]
@@ -242,8 +262,11 @@ Function Compare-RegistryRules
 
     $results = @()
     $ToBeRemoved = @()
+    $AbsentToBeRemoved = @()
 
-    foreach($refrenceObject in $Expected)
+    $PresentRules = $Expected.Where({$_.Ensure -eq 'Present'}).Rules
+    $AbsentRules = $Expected.Where({$_.Ensure -eq 'Absent'}).Rules
+    foreach($refrenceObject in $PresentRules)
     {
         $match = $Actual.Where({
             $_.RegistryRights -eq $refrenceObject.RegistryRights -and
@@ -270,7 +293,7 @@ Function Compare-RegistryRules
 
     foreach($refrenceObject in $Actual)
     {
-        $match = $Expected.Where({
+        $match = $Expected.Rules.Where({
             $_.RegistryRights -eq $refrenceObject.RegistryRights -and
             $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
             $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
@@ -285,9 +308,27 @@ Function Compare-RegistryRules
         }
     }
 
+    foreach($refrenceObject in $AbsentRules)
+    {
+        $match = $Actual.Where({
+            $_.RegistryRights -eq $refrenceObject.RegistryRights -and
+            $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
+            $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
+            $_.AccessControlType -eq $refrenceObject.AccessControlType -and
+            $_.IdentityReference -eq $refrenceObject.IdentityReference
+        })
+        if($match.Count -gt 0)
+        {
+            $AbsentToBeRemoved += [PSCustomObject]@{
+                Rule = $refrenceObject
+            }
+        }
+    }
+
     return [PSCustomObject]@{
         Rules = $results
         ToBeRemoved = $ToBeRemoved
+        Absent = $AbsentToBeRemoved
     }
 }
 
