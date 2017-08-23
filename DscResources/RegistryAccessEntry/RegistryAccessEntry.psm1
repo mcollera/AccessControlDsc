@@ -2,6 +2,16 @@ Import-Module -Name (Join-Path -Path ( Split-Path $PSScriptRoot -Parent ) `
                                -ChildPath 'AccessControlResourceHelper\AccessControlResourceHelper.psm1') `
                                -Force
 
+# Localized messages
+data LocalizedData
+{
+    # culture="en-US"
+    ConvertFrom-StringData -StringData @'
+        ErrorPathNotFound = The requested path "{0}" cannot be found.
+'@
+}
+
+
 Function Get-TargetResource
 {
 	[CmdletBinding()]
@@ -20,49 +30,54 @@ Function Get-TargetResource
 		$Force = $false
 	)
 
+    $NameSpace = "root/Microsoft/Windows/DesiredStateConfiguration"
+
     if(-not (Test-Path -Path $Path))
     {
-        Write-host "Throw Error here"
+        $errorMessage = $LocalizedData.ErrorPathNotFound -f $Path
+        throw $errorMessage
     }
 
-    $Acl = Get-Acl -Path $Path
+    $currentACL = Get-Acl -Path $Path
 
-    $CimAccessControlEntries = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
-    $CimAccessControlLists = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
-
+    $CimAccessControlList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
 
     foreach($Principal in $AccessControlList)
     {
-        $Identity = Resolve-Identity -Identity $Principal.Principal
-        foreach($ACLAccess in $Acl.Access.Where({$_.IdentityReference -eq $Identity.Name}))
+        $CimAccessControlEntries = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
+
+        $PrincipalName = $Principal.Principal
+        $ForcePrincipal = $Principal.ForcePrincipal
+
+        $Identity = Resolve-Identity -Identity $PrincipalName
+        $currentPrincipalAccess = $currentACL.Access.Where({$_.IdentityReference -eq $Identity.Name})
+        foreach($Access in $currentPrincipalAccess)
         {
-            $CimAccessControlEntry = New-CimInstance -ClientOnly `
-                    -Namespace root/Microsoft/Windows/DesiredStateConfiguration `
-                    -ClassName AccessControlEntry `
-                    -Property @{
-                        AccessControlType = $ACLAccess.AccessControlType.ToString()
-                        Rights = $ACLAccess.RegistryRights.ToString()
-                        Inheritance = (Get-RegistryRuleInheritenceName -InheritanceFlag $ACLAccess.InheritanceFlags.value__ -PropagationFlag $ACLAccess.PropagationFlags.value__).ToString()
-                    }
-            $CimAccessControlEntries.Add($CimAccessControlEntry)
+            $AccessControlType = $Access.AccessControlType.ToString()
+            $Rights = $Access.RegistryRights.ToString().Split(',').Trim()
+            $Inheritance = (Get-RegistryRuleInheritenceName -InheritanceFlag $Access.InheritanceFlags.value__ -PropagationFlag $Access.PropagationFlags.value__).ToString()
+
+            $CimAccessControlEntries += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName AccessControlEntry -Property @{
+                AccessControlType = $AccessControlType
+                Rights = @($Rights)
+                Inheritance = $Inheritance
+                Ensure = ""
+            }
         }
 
-        $CimAccessControlList = New-CimInstance -ClientOnly `
-                    -Namespace root/Microsoft/Windows/DesiredStateConfiguration `
-                    -ClassName AccessControlList `
-                    -Property @{
-                        Principal = $Principal.Principal.ToString()
-                        ForcePrincipal = $Principal.ForcePrincipal
+        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName AccessControlList -Property @{
+                        Principal = $PrincipalName
+                        ForcePrincipal = $ForcePrincipal
                         AccessControlEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($CimAccessControlEntries)
                     }
-        $CimAccessControlLists.Add($CimAccessControlList)
     }
 
     $ReturnValue = @{
-        Force = $false #ToDo
+        Force = $Force
         Path = $Path
-        AccessControlList = [Microsoft.Management.Infrastructure.CimInstance[]]@($CimAccessControlLists)
+        AccessControlList = $CimAccessControlList
     }
+
     return $ReturnValue
 }
 
@@ -82,6 +97,46 @@ Function Set-TargetResource
 		[bool]
 		$Force = $false
 	)
+
+    if(-not (Test-Path -Path $Path))
+    {
+        $errorMessage = $LocalizedData.ErrorPathNotFound -f $Path
+        throw $errorMessage
+    }
+
+    $currentAcl = Get-Acl -Path $Path
+
+
+    foreach($Principal in $AccessControlList)
+    {
+        $Results = Get-RegistryResults -Principal $Principal -ACL $currentAcl
+        $Expected = $Results.Rules
+        $ToBeRemoved = $Results.ToBeRemoved
+
+        foreach($Rule in $Expected)
+        {
+            if($Rule.Match -eq $false)
+            {
+                $currentAcl.AddAccessRule($Rule.Rule)
+            }
+        }
+
+        if($Principal.ForcePrincipal)
+        {
+            $isInherited = $ToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
+            if($isInherited -gt 0)
+            {
+                $currentAcl.SetAccessRuleProtection($true,$true)
+            }
+            foreach($Rule in $ToBeRemoved.Rule)
+            {
+                $currentAcl.RemoveAccessRule($Rule)
+            }
+        }
+
+        Set-Acl -Path $Path -AclObject $currentAcl
+
+    }
 }
 
 Function Test-TargetResource
@@ -104,24 +159,24 @@ Function Test-TargetResource
 
     if(-not (Test-Path -Path $Path))
     {
-        Write-host "Throw Error here"
+        $errorMessage = $LocalizedData.ErrorPathNotFound -f $Path
+        throw $errorMessage
     }
 
-    $Acl = Get-Acl -Path $Path
+    $currentAcl = Get-Acl -Path $Path
 
 
     foreach($Principal in $AccessControlList)
     {
-        $Results = Get-RegistryResults -Principal $Principal -ACl $Acl
-        $EnsureResult = $true
-        $Expected = $Results[0]
-        $ToBeRemoved = $Results[1]
+        $Results = Get-RegistryResults -Principal $Principal -ACL $currentAcl
+        $Expected = $Results.Rules
+        $ToBeRemoved = $Results.ToBeRemoved
 
         foreach($Rule in $Expected)
         {
-            if($Rule[1] -eq $false)
+            if($Rule.Match -eq $false)
             {
-                $EnsureResult = $false
+                return $false
             }
         }
 
@@ -129,13 +184,11 @@ Function Test-TargetResource
         {
             if($ToBeRemoved.Count -gt 0)
             {
-                $EnsureResult = $false
+                return $false
             }
         }
     }
-
-
-return $EnsureResult
+    return $true
 }
 
 Function Get-RegistryResults
@@ -148,7 +201,7 @@ Function Get-RegistryResults
 
         [Parameter(Mandatory = $true)]
         [System.Security.AccessControl.RegistrySecurity]
-        $ACl
+        $ACL
     )
 
     $Identity = Resolve-Identity -Identity $Principal.Principal
@@ -163,13 +216,13 @@ Function Get-RegistryResults
         {
             $accessMask = $accessMask + ([System.Security.AccessControl.RegistryRights]::Parse([type]::GetType("System.Security.AccessControl.RegistryRights"), $mask)).value__
         }
-        $Inheritance = Get-RegistryRuleInheritence -Inheritance $ace.Inheritance
+        $Inheritance = Get-RegistryRuleInheritenceFlags -Inheritance $ace.Inheritance
 
-        $refrenceObject += [System.Security.AccessControl.RegistryAccessRule]::new($IdentityRef, $mask, $Inheritance.InheritanceFlag, $Inheritance.PropagationFlag, $ace.AccessControlType)
+        $refrenceObject += [System.Security.AccessControl.RegistryAccessRule]::new($IdentityRef, $accessMask, $Inheritance.InheritanceFlag, $Inheritance.PropagationFlag, $ace.AccessControlType)
 
     }
 
-    $actualAce = $Acl.Access.Where({$_.IdentityReference -eq $Identity.Name})
+    $actualAce = $ACL.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
     return Compare-RegistryRules -Expected $refrenceObject -Actual $actualAce
 }
@@ -182,7 +235,7 @@ Function Compare-RegistryRules
         [System.Security.AccessControl.RegistryAccessRule[]]
         $Expected,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter()]
         [System.Security.AccessControl.RegistryAccessRule[]]
         $Actual
     )
@@ -201,11 +254,17 @@ Function Compare-RegistryRules
         })
         if($match.Count -ge 1)
         {
-            $results += ,@($refrenceObject, $true)
+            $results += [PSCustomObject]@{
+                Rule = $refrenceObject
+                Match = $true
+            }
         }
         else
         {
-            $results += ,@($refrenceObject, $false)
+            $results += [PSCustomObject]@{
+                Rule = $refrenceObject
+                Match = $false
+            }
         }
     }
 
@@ -220,14 +279,19 @@ Function Compare-RegistryRules
         })
         if($match.Count -eq 0)
         {
-            $ToBeRemoved += ,@($refrenceObject)
+            $ToBeRemoved += [PSCustomObject]@{
+                Rule = $refrenceObject
+            }
         }
     }
 
-    return @($results, $ToBeRemoved)
+    return [PSCustomObject]@{
+        Rules = $results
+        ToBeRemoved = $ToBeRemoved
+    }
 }
 
-Function Get-RegistryRuleInheritence
+Function Get-RegistryRuleInheritenceFlags
 {
     [CmdletBinding()]
 	param
@@ -242,17 +306,19 @@ Function Get-RegistryRuleInheritence
         "Key"{
             $InheritanceFlag = "0"
             $PropagationFlag = "0"
+            break
 
         }
         "KeySubkeys"{
             $InheritanceFlag = "1"
             $PropagationFlag = "0"
+            break
 
         }
         "Subkeys"{
             $InheritanceFlag = "1"
             $PropagationFlag = "2"
-
+            break
         }
     }
 
@@ -279,15 +345,15 @@ Function Get-RegistryRuleInheritenceName
     switch("$InheritanceFlag-$PropagationFlag")
     {
         "0-0"{
-            return "Key"
+            return "This Key Only"
 
         }
         "1-0"{
-            return "KeySubkeys"
+            return "This Key and Subkeys"
 
         }
         "1-2"{
-            return "Subkeys"
+            return "Subkeys Only"
 
         }
     }

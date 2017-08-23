@@ -41,14 +41,16 @@ configuration Sample_AccessControl
                         AccessControlEntry
                         {
                             AccessControlType = 'Allow'
-                            Rights = 'CreateSubKey','ChangePermissions','Delete'
+                            Rights = 'CreateSubKey','Delete', 'SetValue'
                             Inheritance = 'This Key Only'
+                            Ensure = 'Present'
                         }
                         AccessControlEntry
                         {
                             AccessControlType = 'Allow'
                             Rights = 'FullControl'
                             Inheritance = 'SubKeys Only'
+                            Ensure = 'Present'
                         }
                     )               
                 }
@@ -60,8 +62,9 @@ configuration Sample_AccessControl
                         AccessControlEntry
                         {
                             AccessControlType = 'Allow'
-                            Rights = 'CreateSubKey','ChangePermissions','Delete'
-                            Inheritance = 'This Key Only'
+                            Rights = 'ReadKey'
+                            Inheritance = 'SubKeys Only'
+                            Ensure = 'Present'
                         }
                     )               
                 }
