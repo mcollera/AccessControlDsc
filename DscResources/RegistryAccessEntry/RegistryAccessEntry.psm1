@@ -151,6 +151,15 @@ Function Set-TargetResource
             }
         }
     }
+    $isInherited = 0
+    $isInherited += $AbsentToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
+    $isInherited += $ToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
+
+    if($isInherited -gt 0)
+    {
+        $currentAcl.SetAccessRuleProtection($true,$true)
+        Set-Acl -Path $Path -AclObject $currentAcl
+    }
 
     foreach($Rule in $Expected)
     {
@@ -160,23 +169,11 @@ Function Set-TargetResource
         }
     }
 
-    $isInherited = $AbsentToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
-    if($isInherited -gt 0)
-    {
-        $currentAcl.SetAccessRuleProtection($true,$true)
-        Set-Acl -Path $Path -AclObject $currentAcl
-    }
     foreach($Rule in $AbsentToBeRemoved.Rule)
     {
         $currentAcl.RemoveAccessRule($Rule)
     }
 
-    $isInherited = $ToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
-    if($isInherited -gt 0)
-    {
-        $currentAcl.SetAccessRuleProtection($true,$true)
-        Set-Acl -Path $Path -AclObject $currentAcl
-    }
     foreach($Rule in $ToBeRemoved.Rule)
     {
         try
@@ -187,6 +184,7 @@ Function Set-TargetResource
         {
             try
             {
+                #If failure due to Idenitty translation issue then create the same rule with the identity as a sid to remove account
                 $PrinicipalName = $Rule.IdentityReference.Value.split('\')[1]
                 [System.Security.Principal.NTAccount]$PrinicipalName = $PrinicipalName
                 $SID = $PrinicipalName.Translate([System.Security.Principal.SecurityIdentifier])
@@ -201,7 +199,6 @@ Function Set-TargetResource
     }
 
     Set-Acl -Path $Path -AclObject $currentAcl
-
 }
 
 Function Test-TargetResource
@@ -312,15 +309,10 @@ Function ConvertTo-RegistryAccessRule
 
     foreach($ace in $AccessControlList.AccessControlEntry)
     {
-        $accessMask = 0
-        foreach($mask in $ace.Rights)
-        {
-            $accessMask = $accessMask + ([System.Security.AccessControl.RegistryRights]::Parse([type]::GetType("System.Security.AccessControl.RegistryRights"), $mask)).value__
-        }
         $Inheritance = Get-RegistryRuleInheritenceFlags -Inheritance $ace.Inheritance
 
         $rule = [PSCustomObject]@{
-            Rules = [System.Security.AccessControl.RegistryAccessRule]::new($IdentityRef, $accessMask, $Inheritance.InheritanceFlag, $Inheritance.PropagationFlag, $ace.AccessControlType)
+            Rules = [System.Security.AccessControl.RegistryAccessRule]::new($IdentityRef, $ace.Rights, $Inheritance.InheritanceFlag, $Inheritance.PropagationFlag, $ace.AccessControlType)
             Ensure = $ace.Ensure
         }
         $refrenceObject += $rule
