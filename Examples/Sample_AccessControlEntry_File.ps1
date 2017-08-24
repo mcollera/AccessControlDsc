@@ -32,7 +32,7 @@ configuration Sample_AccessControl
         RegistryAccessEntry Test
         {
             Path = "HKLM:\Software\Test"
-            Force = $false
+            Force = $true
             AccessControlList = @(
                 AccessControlList
                 {
@@ -69,6 +69,20 @@ configuration Sample_AccessControl
                         }
                     )               
                 }
+                AccessControlList
+                {
+                    Principal = "System"
+                    ForcePrincipal = $false
+                    AccessControlEntry = @(
+                        AccessControlEntry
+                        {
+                            AccessControlType = 'Allow'
+                            Rights = 'FullControl'
+                            Inheritance = 'This Key and Subkeys'
+                            Ensure = 'Present'
+                        }
+                    )               
+                }
             )
         }
     }
@@ -83,4 +97,4 @@ $null = Remove-PSSession -Session $session
 RpsConfiguration -OutputPath $OutputPath
 Sample_AccessControl -OutputPath $OutputPath
 Set-DscLocalConfigurationManager -Path $OutputPath -ComputerName $TargetName -Credential $credential -Force
-Start-DscConfiguration -Path $OutputPath -ComputerName $TargetName -Credential $credential -Wait -Force
+Start-DscConfiguration -Path $OutputPath -ComputerName $TargetName -Credential $credential -Wait -Force -Verbose
