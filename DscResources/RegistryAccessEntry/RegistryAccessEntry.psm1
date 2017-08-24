@@ -107,47 +107,56 @@ Function Set-TargetResource
     $currentAcl = Get-Acl -Path $Path
 
 
-    foreach($Principal in $AccessControlList)
+    foreach($AccessControlItem in $AccessControlList)
     {
-        $Results = Get-RegistryResults -Principal $Principal -ACL $currentAcl
-        $Expected = $Results.Rules
-        $ToBeRemoved = $Results.ToBeRemoved
-        $AbsentToBeRemoved = $Results.Absent
+        $Principal = $AccessControlItem.Principal
+        $Identity = Resolve-Identity -Identity $Principal
+        $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
 
-        foreach($Rule in $Expected)
+        $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
+
+        $ACLRules = ConvertTo-RegistryAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
+        $Results = Compare-RegistryRules -Expected $ACLRules -Actual $actualAce
+
+        $Expected += $Results.Rules
+        $AbsentToBeRemoved += $Results.Absent
+
+        if($AccessControlItem.ForcePrinciPal)
         {
-            if($Rule.Match -eq $false)
-            {
-                $currentAcl.AddAccessRule($Rule.Rule)
-            }
+            $ToBeRemoved += $Results.ToBeRemoved
         }
-
-        $isInherited = $AbsentToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
-        if($isInherited -gt 0)
-        {
-            $currentAcl.SetAccessRuleProtection($true,$true)
-        }
-        foreach($Rule in $AbsentToBeRemoved.Rule)
-        {
-            $currentAcl.RemoveAccessRule($Rule)
-        }
-
-        if($Principal.ForcePrincipal)
-        {
-            $isInherited = $ToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
-            if($isInherited -gt 0)
-            {
-                $currentAcl.SetAccessRuleProtection($true,$true)
-            }
-            foreach($Rule in $ToBeRemoved.Rule)
-            {
-                $currentAcl.RemoveAccessRule($Rule)
-            }
-        }
-
-        Set-Acl -Path $Path -AclObject $currentAcl
-
     }
+
+    foreach($Rule in $Expected)
+    {
+        if($Rule.Match -eq $false)
+        {
+            $currentAcl.AddAccessRule($Rule.Rule)
+        }
+    }
+
+    $isInherited = $AbsentToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
+    if($isInherited -gt 0)
+    {
+        $currentAcl.SetAccessRuleProtection($true,$true)
+    }
+    foreach($Rule in $AbsentToBeRemoved.Rule)
+    {
+        $currentAcl.RemoveAccessRule($Rule)
+    }
+
+    $isInherited = $ToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
+    if($isInherited -gt 0)
+    {
+        $currentAcl.SetAccessRuleProtection($true,$true)
+    }
+    foreach($Rule in $ToBeRemoved.Rule)
+    {
+        $currentAcl.RemoveAccessRule($Rule)
+    }
+
+    Set-Acl -Path $Path -AclObject $currentAcl
+
 }
 
 Function Test-TargetResource
@@ -177,56 +186,65 @@ Function Test-TargetResource
     $currentAcl = Get-Acl -Path $Path
 
 
-    foreach($Principal in $AccessControlList)
+    foreach($AccessControlItem in $AccessControlList)
     {
-        $Results = Get-RegistryResults -Principal $Principal -ACL $currentAcl
-        $Expected = $Results.Rules
-        $ToBeRemoved = $Results.ToBeRemoved
-        $AbsentToBeRemoved = $Results.Absent
+        $Principal = $AccessControlItem.Principal
+        $Identity = Resolve-Identity -Identity $Principal
+        $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
 
-        foreach($Rule in $Expected)
+        $ACLRules = ConvertTo-RegistryAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
+
+        $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
+
+        $Results = Compare-RegistryRules -Expected $ACLRules -Actual $actualAce
+
+        $Expected += $Results.Rules
+        $AbsentToBeRemoved += $Results.Absent
+
+        if($AccessControlItem.ForcePrinciPal)
         {
-            if($Rule.Match -eq $false)
-            {
-                return $false
-            }
+            $ToBeRemoved += $Results.ToBeRemoved
         }
 
-        if($AbsentToBeRemoved.Count)
+    }
+
+    foreach($Rule in $Expected)
+    {
+        if($Rule.Match -eq $false)
         {
             return $false
         }
-
-        if($Principal.ForcePrincipal)
-        {
-            if($ToBeRemoved.Count -gt 0)
-            {
-                return $false
-            }
-        }
     }
+
+    if($AbsentToBeRemoved.Count -gt 0)
+    {
+        return $false
+    }
+
+    if($ToBeRemoved.Count -gt 0)
+    {
+        return $false
+    }
+
     return $true
 }
 
-Function Get-RegistryResults
+Function ConvertTo-RegistryAccessRule
 {
     param
     (
         [Parameter(Mandatory = $true)]
         [Microsoft.Management.Infrastructure.CimInstance]
-        $Principal,
+        $AccessControlList,
 
         [Parameter(Mandatory = $true)]
-        [System.Security.AccessControl.RegistrySecurity]
-        $ACL
+        [System.Security.Principal.NTAccount]
+        $IdentityRef
     )
-
-    $Identity = Resolve-Identity -Identity $Principal.Principal
-    $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
 
     $refrenceObject = @()
 
-    foreach($ace in $Principal.AccessControlEntry)
+    foreach($ace in $AccessControlList.AccessControlEntry)
     {
         $accessMask = 0
         foreach($mask in $ace.Rights)
@@ -242,9 +260,7 @@ Function Get-RegistryResults
         $refrenceObject += $rule
     }
 
-    $actualAce = $ACL.Access.Where({$_.IdentityReference -eq $Identity.Name})
-
-    return Compare-RegistryRules -Expected $refrenceObject -Actual $actualAce
+    return $refrenceObject
 }
 
 Function Compare-RegistryRules

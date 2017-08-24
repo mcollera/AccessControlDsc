@@ -51,7 +51,7 @@ configuration Sample_AccessControl
                             AccessControlType = 'Allow'
                             Rights = 'FullControl'
                             Inheritance = 'SubKeys Only'
-                            Ensure = 'Absent'
+                            Ensure = 'Present'
                         }
                     )               
                 }
