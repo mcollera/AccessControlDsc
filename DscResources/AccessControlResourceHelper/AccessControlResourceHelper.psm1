@@ -1,14 +1,14 @@
 function Resolve-Identity
 {
     <#
-    .SYNOPSIS
-        
+        .SYNOPSIS
+            Resolves the principal name SID 
 
-    .DESCRIPTION
-        
+        .PARAMETER Identity
+            Specifies the identity of the principal.
 
-    .PARAMETER Identity
-        Specifies the identity of the principal.
+        .EXAMPLE
+        Resolve-Identity -Identity "everyone"
     #>
     [CmdletBinding()]
     param
@@ -50,4 +50,37 @@ function Resolve-Identity
             return
         }
     }
+}
+
+<#
+    .SYNOPSIS
+    Takes identity name and translates to SID
+
+    .PARAMETER IdentityReference
+    System.Security.Principal.NTAccount object 
+
+    .EXAMPLE
+    $IdentityReference = (Get-Acl -Path C:\temp).access[0].IdentityReference
+    ConvertTo-SID -IdentityReference $IdentityReference
+#>
+
+function ConvertTo-SID
+{
+
+    Param
+    (
+        [Parameter(Mandatory = $true)]
+        [String]
+        $IdentityReference
+    )
+
+    If($IdentityReference.Contains("\"))
+    {
+        $IdentityReference = $IdentityReference.split('\')[1]
+    }
+    
+    [System.Security.Principal.NTAccount]$PrinicipalName = $IdentityReference
+    $SID = $PrinicipalName.Translate([System.Security.Principal.SecurityIdentifier])
+
+    Return $SID
 }
