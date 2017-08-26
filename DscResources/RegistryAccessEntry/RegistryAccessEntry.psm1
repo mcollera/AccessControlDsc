@@ -4,21 +4,21 @@ Import-Module -Name (Join-Path -Path ( Split-Path $PSScriptRoot -Parent ) `
 
 Function Get-TargetResource
 {
-	[CmdletBinding()]
-	[OutputType([Hashtable])]
-	param
-	(
-		[parameter(Mandatory = $true)]
-		[System.String]
-		$Path,
+    [CmdletBinding()]
+    [OutputType([Hashtable])]
+    param
+    (
+        [parameter(Mandatory = $true)]
+        [System.String]
+        $Path,
 
         [Parameter(Mandatory=$true)]
-		[Microsoft.Management.Infrastructure.CimInstance[]]
-		$AccessControlList,
+        [Microsoft.Management.Infrastructure.CimInstance[]]
+        $AccessControlList,
 
-		[bool]
-		$Force = $false
-	)
+        [bool]
+        $Force = $false
+    )
 
     if(-not (Test-Path -Path $Path))
     {
@@ -68,39 +68,39 @@ Function Get-TargetResource
 
 Function Set-TargetResource
 {
-	[CmdletBinding()]
-	param
-	(
-		[parameter(Mandatory = $true)]
-		[System.String]
-		$Path,
+    [CmdletBinding()]
+    param
+    (
+        [parameter(Mandatory = $true)]
+        [System.String]
+        $Path,
 
         [Parameter(Mandatory=$true)]
-		[Microsoft.Management.Infrastructure.CimInstance[]]
-		$AccessControlList,
+        [Microsoft.Management.Infrastructure.CimInstance[]]
+        $AccessControlList,
 
-		[bool]
-		$Force = $false
-	)
+        [bool]
+        $Force = $false
+    )
 }
 
 Function Test-TargetResource
 {
-	[CmdletBinding()]
-	[OutputType([System.Boolean])]
-	param
-	(
-		[parameter(Mandatory = $true)]
-		[System.String]
-		$Path,
+    [CmdletBinding()]
+    [OutputType([System.Boolean])]
+    param
+    (
+        [parameter(Mandatory = $true)]
+        [System.String]
+        $Path,
 
         [Parameter(Mandatory=$true)]
-		[Microsoft.Management.Infrastructure.CimInstance[]]
-		$AccessControlList,
+        [Microsoft.Management.Infrastructure.CimInstance[]]
+        $AccessControlList,
 
-		[bool]
-		$Force = $false
-	)
+        [bool]
+        $Force = $false
+    )
 
     if(-not (Test-Path -Path $Path))
     {
@@ -230,12 +230,12 @@ Function Compare-RegistryRules
 Function Get-RegistryRuleInheritence
 {
     [CmdletBinding()]
-	param
-	(
-		[parameter(Mandatory = $true)]
-		[System.String]
-		$Inheritance
-	)
+    param
+    (
+        [parameter(Mandatory = $true)]
+        [System.String]
+        $Inheritance
+    )
 
     switch($Inheritance)
     {
@@ -265,16 +265,16 @@ Function Get-RegistryRuleInheritence
 Function Get-RegistryRuleInheritenceName
 {
     [CmdletBinding()]
-	param
-	(
-		[parameter(Mandatory = $true)]
-		[System.String]
-		$InheritanceFlag,
+    param
+    (
+        [parameter(Mandatory = $true)]
+        [System.String]
+        $InheritanceFlag,
 
         [parameter(Mandatory = $true)]
-		[System.String]
-		$PropagationFlag
-	)
+        [System.String]
+        $PropagationFlag
+    )
 
     switch("$InheritanceFlag-$PropagationFlag")
     {

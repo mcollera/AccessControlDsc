@@ -13,21 +13,21 @@ data LocalizedData
 
 Function Get-TargetResource
 {
-	[CmdletBinding()]
-	[OutputType([Hashtable])]
-	param
-	(
-		[parameter(Mandatory = $true)]
-		[System.String]
-		$Path,
+    [CmdletBinding()]
+    [OutputType([Hashtable])]
+    param
+    (
+        [parameter(Mandatory = $true)]
+        [System.String]
+        $Path,
 
         [Parameter(Mandatory=$true)]
-		[Microsoft.Management.Infrastructure.CimInstance[]]
-		$AccessControlList,
+        [Microsoft.Management.Infrastructure.CimInstance[]]
+        $AccessControlList,
 
-		[bool]
-		$Force = $false
-	)
+        [bool]
+        $Force = $false
+    )
 
     $NameSpace = "root/Microsoft/Windows/DesiredStateConfiguration"
 
@@ -82,20 +82,20 @@ Function Get-TargetResource
 
 Function Set-TargetResource
 {
-	[CmdletBinding()]
-	param
-	(
-		[parameter(Mandatory = $true)]
-		[System.String]
-		$Path,
+    [CmdletBinding()]
+    param
+    (
+        [parameter(Mandatory = $true)]
+        [System.String]
+        $Path,
 
         [Parameter(Mandatory=$true)]
-		[Microsoft.Management.Infrastructure.CimInstance[]]
-		$AccessControlList,
+        [Microsoft.Management.Infrastructure.CimInstance[]]
+        $AccessControlList,
 
-		[bool]
-		$Force = $false
-	)
+        [bool]
+        $Force = $false
+    )
 
     if(-not (Test-Path -Path $Path))
     {
@@ -194,7 +194,7 @@ Function Set-TargetResource
             {
                 #If failure due to Idenitty translation issue then create the same rule with the identity as a sid to remove account
                 $SID = ConvertTo-SID -IdentityReference $Rule.IdentityReference.Value
-                $SIDRule = [System.Security.AccessControl.RegistryAccessRule]::new($SID, $Rule.RegistryRights.value__, $Rule.InheritanceFlags.value__, $Rule.PropagationFlags.value__, $Rule.AccessControlType.value__)
+                $SIDRule = [System.Security.AccessControl.FileSystemRights]::new($SID, $Rule.FileSystemRights.value__, $Rule.InheritanceFlags.value__, $Rule.PropagationFlags.value__, $Rule.AccessControlType.value__)
                 $currentAcl.RemoveAccessRule($SIDRule)
             }
             catch
@@ -209,21 +209,21 @@ Function Set-TargetResource
 
 Function Test-TargetResource
 {
-	[CmdletBinding()]
-	[OutputType([System.Boolean])]
-	param
-	(
-		[parameter(Mandatory = $true)]
-		[System.String]
-		$Path,
+    [CmdletBinding()]
+    [OutputType([System.Boolean])]
+    param
+    (
+        [parameter(Mandatory = $true)]
+        [System.String]
+        $Path,
 
         [Parameter(Mandatory=$true)]
-		[Microsoft.Management.Infrastructure.CimInstance[]]
-		$AccessControlList,
+        [Microsoft.Management.Infrastructure.CimInstance[]]
+        $AccessControlList,
 
-		[bool]
-		$Force = $false
-	)
+        [bool]
+        $Force = $false
+    )
 
     if(-not (Test-Path -Path $Path))
     {
@@ -301,12 +301,12 @@ Function Test-TargetResource
 Function Get-NtfsInheritenceFlags
 {
     [CmdletBinding()]
-	param
-	(
-		[parameter(Mandatory = $true)]
-		[System.String]
-		$Inheritance
-	)
+    param
+    (
+        [parameter(Mandatory = $true)]
+        [System.String]
+        $Inheritance
+    )
 
     switch($Inheritance)
     {
@@ -360,16 +360,16 @@ Function Get-NtfsInheritenceFlags
 Function Get-NtfsInheritenceName
 {
     [CmdletBinding()]
-	param
-	(
-		[parameter(Mandatory = $true)]
-		[System.String]
-		$InheritanceFlag,
+    param
+    (
+        [parameter(Mandatory = $true)]
+        [System.String]
+        $InheritanceFlag,
 
         [parameter(Mandatory = $true)]
-		[System.String]
-		$PropagationFlag
-	)
+        [System.String]
+        $PropagationFlag
+    )
 
     switch("$InheritanceFlag-$PropagationFlag")
     {
@@ -450,7 +450,7 @@ Function Compare-NtfsRules
     foreach($refrenceObject in $PresentRules)
     {
         $match = $Actual.Where({
-            $_.RegistryRights -eq $refrenceObject.RegistryRights -and
+            $_.FileSystemRights -eq $refrenceObject.FileSystemRights -and
             $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
             $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
             $_.AccessControlType -eq $refrenceObject.AccessControlType -and
@@ -475,7 +475,7 @@ Function Compare-NtfsRules
     foreach($refrenceObject in $Actual)
     {
         $match = $Expected.Rules.Where({
-            $_.RegistryRights -eq $refrenceObject.RegistryRights -and
+            $_.FileSystemRights -eq $refrenceObject.FileSystemRights -and
             $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
             $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
             $_.AccessControlType -eq $refrenceObject.AccessControlType -and
@@ -492,7 +492,7 @@ Function Compare-NtfsRules
     foreach($refrenceObject in $AbsentRules)
     {
         $match = $Actual.Where({
-            $_.RegistryRights -eq $refrenceObject.RegistryRights -and
+            $_.FileSystemRights -eq $refrenceObject.FileSystemRights -and
             $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
             $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
             $_.AccessControlType -eq $refrenceObject.AccessControlType -and
