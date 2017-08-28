@@ -28,6 +28,7 @@ Function Get-TargetResource
         [Microsoft.Management.Infrastructure.CimInstance[]]
         $AccessControlList,
 
+        [Parameter()]
         [bool]
         $Force = $false
     )
@@ -110,6 +111,7 @@ Function Set-TargetResource
         [Microsoft.Management.Infrastructure.CimInstance[]]
         $AccessControlList,
 
+        [Parameter()]
         [bool]
         $Force = $false
     )
@@ -268,6 +270,7 @@ Function Test-TargetResource
         [Microsoft.Management.Infrastructure.CimInstance[]]
         $AccessControlList,
 
+        [Parameter()]
         [bool]
         $Force = $false
     )
