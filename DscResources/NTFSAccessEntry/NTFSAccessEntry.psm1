@@ -8,6 +8,9 @@ data LocalizedData
     # culture="en-US"
     ConvertFrom-StringData -StringData @'
         ErrorPathNotFound = The requested path "{0}" cannot be found.
+        AclNotFound = Error obtaining "{0}" ACL
+        AclFound = Obtained "{0}" ACL
+        RemoveAccessError = "Unable to remove Access for "{0}"
 '@
 }
 
@@ -17,7 +20,7 @@ Function Get-TargetResource
     [OutputType([Hashtable])]
     param
     (
-        [parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [System.String]
         $Path,
 
@@ -30,53 +33,67 @@ Function Get-TargetResource
     )
 
     $NameSpace = "root/Microsoft/Windows/DesiredStateConfiguration"
-
-    if(-not (Test-Path -Path $Path))
-    {
-        $errorMessage = $LocalizedData.ErrorPathNotFound -f $Path
-        throw $errorMessage
-    }
-
-    $currentACL = Get-Acl -Path $Path
-
     $CimAccessControlList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
 
-    foreach($Principal in $AccessControlList)
+    if(Test-Path -Path $Path)
     {
-        $CimAccessControlEntry = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
+        $currentACL = Get-Acl -Path $Path -ErrorAction Stop
 
-        $PrincipalName = $Principal.Principal
-        $ForcePrincipal = $Principal.ForcePrincipal
-
-        $Identity = Resolve-Identity -Identity $PrincipalName
-        $currentPrincipalAccess = $currentACL.Access.Where({$_.IdentityReference -eq $Identity.Name})
-
-        foreach($Access in $currentPrincipalAccess)
+        if($null -ne $currentACL)
         {
-            $AccessControlType = $Access.AccessControlType.ToString()
-            $FileSystemRights = $Access.FileSystemRights.ToString().Split(',').Trim()
-            $Inheritance = (Get-NtfsInheritenceName -InheritanceFlag $Access.InheritanceFlags.value__ -PropagationFlag $Access.PropagationFlags.value__).ToString()
+            $message = $LocalizedData.AclFound -f $Path
+            Write-Verbose -Message $message
             
-            $CimAccessControlEntry += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName NTFSAccessControlEntry -Property @{
-                        AccessControlType = $AccessControlType
-                        FileSystemRights = @($FileSystemRights)
-                        Inheritance = $Inheritance
-                        Ensure = ""
-                    }
-        }
+            foreach($Principal in $AccessControlList)
+            {
+                $CimAccessControlEntry = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
 
-        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName NTFSAccessControlList -Property @{
-                        Principal = $PrincipalName
-                        ForcePrincipal = $ForcePrincipal
-                        AccessControlEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($CimAccessControlEntry)
-                    }
+                $PrincipalName = $Principal.Principal
+                $ForcePrincipal = $Principal.ForcePrincipal
+
+                $Identity = Resolve-Identity -Identity $PrincipalName
+                $currentPrincipalAccess = $currentACL.Access.Where({$_.IdentityReference -eq $Identity.Name})
+
+                foreach($Access in $currentPrincipalAccess)
+                {
+                    $AccessControlType = $Access.AccessControlType.ToString()
+                    $FileSystemRights = $Access.FileSystemRights.ToString().Split(',').Trim()
+                    $Inheritance = Get-NtfsInheritenceName -InheritanceFlag $Access.InheritanceFlags.value__ -PropagationFlag $Access.PropagationFlags.value__
+            
+                    $CimAccessControlEntry += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName NTFSAccessControlEntry -Property @{
+                                AccessControlType = $AccessControlType
+                                FileSystemRights = @($FileSystemRights)
+                                Inheritance = $Inheritance
+                                Ensure = ""
+                            }
+                }
+
+                $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName NTFSAccessControlList -Property @{
+                                Principal = $PrincipalName
+                                ForcePrincipal = $ForcePrincipal
+                                AccessControlEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($CimAccessControlEntry)
+                            }
+            }
+
+        }
+        else
+        {
+            $message = $LocalizedData.AclNotFound -f $Path
+            Write-Verbose -Message $message
+        }
+    }
+    else
+    {
+        $Message = $LocalizedData.ErrorPathNotFound -f $Path
+        Write-Verbose -Message $Message
     }
 
-   $ReturnValue = @{
+    $ReturnValue = @{
         Force = $Force
         Path = $Path
         AccessControlList = $CimAccessControlList
     }
+
     return $ReturnValue
 }
 
@@ -85,7 +102,7 @@ Function Set-TargetResource
     [CmdletBinding()]
     param
     (
-        [parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [System.String]
         $Path,
 
@@ -97,114 +114,144 @@ Function Set-TargetResource
         $Force = $false
     )
 
-    if(-not (Test-Path -Path $Path))
+    if(Test-Path -Path $Path)
     {
-        $errorMessage = $LocalizedData.ErrorPathNotFound -f $Path
-        throw $errorMessage
-    }
-
-    $currentAcl = Get-Acl -Path $Path
-    if($null -eq $currentAcl)
-    {
-        $IsContainer = (Get-Item -Path $Path).PSIsContainer
-        If($IsContainer)
+        $currentAcl = Get-Acl -Path $Path
+        if($null -ne $currentAcl)
         {
-            $currentAcl = New-Object -TypeName "System.Security.AccessControl.DirectorySecurity"
-        }
-        Else
-        {
-            $currentAcl = New-Object -TypeName "System.Security.AccessControl.FileSecurity"
-        }
-    }
+            if($Force)
+            {
+                foreach($AccessControlItem in $AccessControlList)
+                {
+                    $Principal = $AccessControlItem.Principal
+                    $Identity = Resolve-Identity -Identity $Principal
+                    $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
 
-    if($Force)
-    {
-        foreach($AccessControlItem in $AccessControlList)
-        {
-            $Principal = $AccessControlItem.Principal
-            $Identity = Resolve-Identity -Identity $Principal
-            $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
-
-            $ACLRules += ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
-        }    
+                    $ACLRules += ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
+                }    
         
-        $actualAce = $currentAcl.Access
+                $actualAce = $currentAcl.Access
 
-        $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce
+                $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce
 
-        $Expected = $Results.Rules
-        $AbsentToBeRemoved = $Results.Absent
-        $ToBeRemoved = $Results.ToBeRemoved
+                $Expected = $Results.Rules
+                $AbsentToBeRemoved = $Results.Absent
+                $ToBeRemoved = $Results.ToBeRemoved
+            }
+            else
+            {
+                foreach($AccessControlItem in $AccessControlList)
+                {
+                    $Principal = $AccessControlItem.Principal
+                    $Identity = Resolve-Identity -Identity $Principal
+                    $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
+
+                    $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
+
+                    $ACLRules = ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
+                    $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce
+
+                    $Expected += $Results.Rules
+                    $AbsentToBeRemoved += $Results.Absent
+
+                    if($AccessControlItem.ForcePrinciPal)
+                    {
+                        $ToBeRemoved += $Results.ToBeRemoved
+                    }
+                }
+            }
+
+            $isInherited = 0
+            $isInherited += $AbsentToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
+            $isInherited += $ToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
+
+            if($isInherited -gt 0)
+            {
+                $currentAcl.SetAccessRuleProtection($true,$true)
+                Set-Acl -Path $Path -AclObject $currentAcl
+            }
+
+            foreach($Rule in $Expected)
+            {
+                if($Rule.Match -eq $false)
+                {
+                    $NonMatch = $Rule.Rule
+                    ("Adding access rule:"),
+                    ("> Principal         : '{0}'" -f $Principal),
+                    ("> Path              : '{0}'" -f $Path),
+                    ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
+                    ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
+                    ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
+                    ("> InheritanceFlags  : '{0}'" -f $NonMatch.InheritanceFlags),
+                    ("> PropagationFlags  : '{0}'" -f $NonMatch.PropagationFlags) |
+                    Write-Verbose
+
+                    $currentAcl.AddAccessRule($Rule.Rule)
+                }
+            }
+
+            foreach($Rule in $AbsentToBeRemoved.Rule)
+            {
+                $NonMatch = $Rule.Rule
+                ("Removing access rule:"),
+                ("> Principal         : '{0}'" -f $Principal),
+                ("> Path              : '{0}'" -f $Path),
+                ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
+                ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
+                ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
+                ("> InheritanceFlags  : '{0}'" -f $NonMatch.InheritanceFlags),
+                ("> PropagationFlags  : '{0}'" -f $NonMatch.PropagationFlags) |
+                Write-Verbose
+
+                $currentAcl.RemoveAccessRule($Rule)
+            }
+
+            foreach($Rule in $ToBeRemoved.Rule)
+            {
+                try
+                {
+                    $NonMatch = $Rule.Rule
+                    ("Removing access rule:"),
+                    ("> Principal         : '{0}'" -f $Principal),
+                    ("> Path              : '{0}'" -f $Path),
+                    ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
+                    ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
+                    ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
+                    ("> InheritanceFlags  : '{0}'" -f $NonMatch.InheritanceFlags),
+                    ("> PropagationFlags  : '{0}'" -f $NonMatch.PropagationFlags) |
+                    Write-Verbose
+                    $currentAcl.RemoveAccessRule($Rule)
+                }
+                catch
+                {
+                    try
+                    {
+                        #If failure due to Idenitty translation issue then create the same rule with the identity as a sid to remove account
+                        $SID = ConvertTo-SID -IdentityReference $Rule.IdentityReference.Value
+                        $SIDRule = [System.Security.AccessControl.FileSystemRights]::new($SID, $Rule.FileSystemRights.value__, $Rule.InheritanceFlags.value__, $Rule.PropagationFlags.value__, $Rule.AccessControlType.value__)
+                        $currentAcl.RemoveAccessRule($SIDRule)
+                    }
+                    catch
+                    {
+                        $message = $LocalizedData.AclNotFound -f $($Rule.IdentityReference.Value)
+                        Write-Verbose -Message $message
+                    }
+                }
+            }
+
+            Set-Acl -Path $Path -AclObject $currentAcl
+        }
+        else
+        {
+            $message = $LocalizedData.AclNotFound -f $Path
+            Write-Verbose -Message $message
+        }
     }
     else
     {
-        foreach($AccessControlItem in $AccessControlList)
-        {
-            $Principal = $AccessControlItem.Principal
-            $Identity = Resolve-Identity -Identity $Principal
-            $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
-
-            $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
-
-            $ACLRules = ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
-            $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce
-
-            $Expected += $Results.Rules
-            $AbsentToBeRemoved += $Results.Absent
-
-            if($AccessControlItem.ForcePrinciPal)
-            {
-                $ToBeRemoved += $Results.ToBeRemoved
-            }
-        }
+        $Message = $LocalizedData.ErrorPathNotFound -f $Path
+        Write-Verbose -Message $Message
     }
-
-    $isInherited = 0
-    $isInherited += $AbsentToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
-    $isInherited += $ToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
-
-    if($isInherited -gt 0)
-    {
-        $currentAcl.SetAccessRuleProtection($true,$true)
-        Set-Acl -Path $Path -AclObject $currentAcl
-    }
-
-    foreach($Rule in $Expected)
-    {
-        if($Rule.Match -eq $false)
-        {
-            $currentAcl.AddAccessRule($Rule.Rule)
-        }
-    }
-
-    foreach($Rule in $AbsentToBeRemoved.Rule)
-    {
-        $currentAcl.RemoveAccessRule($Rule)
-    }
-
-    foreach($Rule in $ToBeRemoved.Rule)
-    {
-        try
-        {
-            $currentAcl.RemoveAccessRule($Rule)
-        }
-        catch
-        {
-            try
-            {
-                #If failure due to Idenitty translation issue then create the same rule with the identity as a sid to remove account
-                $SID = ConvertTo-SID -IdentityReference $Rule.IdentityReference.Value
-                $SIDRule = [System.Security.AccessControl.FileSystemRights]::new($SID, $Rule.FileSystemRights.value__, $Rule.InheritanceFlags.value__, $Rule.PropagationFlags.value__, $Rule.AccessControlType.value__)
-                $currentAcl.RemoveAccessRule($SIDRule)
-            }
-            catch
-            {
-                Write-Verbose "Unable to remove Access for $($Rule.IdentityReference.Value)"
-            }
-        }
-    }
-
-    Set-Acl -Path $Path -AclObject $currentAcl
 }
 
 Function Test-TargetResource
@@ -213,7 +260,7 @@ Function Test-TargetResource
     [OutputType([System.Boolean])]
     param
     (
-        [parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [System.String]
         $Path,
 
@@ -225,77 +272,123 @@ Function Test-TargetResource
         $Force = $false
     )
 
-    if(-not (Test-Path -Path $Path))
+    $InDesiredState = $True
+  
+    if(Test-Path -Path $Path)
     {
-        $errorMessage = $LocalizedData.ErrorPathNotFound -f $Path
-        throw $errorMessage
-    }
+        $currentACL = Get-Acl -Path $Path
 
-    $currentAcl = Get-Acl -Path $Path
-
-    if($Force)
-    {
-        foreach($AccessControlItem in $AccessControlList)
+        if($null -ne $currentACL)
         {
-            $Principal = $AccessControlItem.Principal
-            $Identity = Resolve-Identity -Identity $Principal
-            $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
+            if($Force)
+            {
+                foreach($AccessControlItem in $AccessControlList)
+                {
+                    $Principal = $AccessControlItem.Principal
+                    $Identity = Resolve-Identity -Identity $Principal
+                    $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
 
-            $ACLRules += ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
-        }    
+                    $ACLRules += ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
+                }    
         
-        $actualAce = $currentAcl.Access
+                $actualAce = $currentAcl.Access
 
-        $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce
+                $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce
 
-        $Expected = $Results.Rules
-        $AbsentToBeRemoved = $Results.Absent
-        $ToBeRemoved = $Results.ToBeRemoved
+                $Expected = $Results.Rules
+                $AbsentToBeRemoved = $Results.Absent
+                $ToBeRemoved = $Results.ToBeRemoved
+            }
+            else
+            {
+                foreach($AccessControlItem in $AccessControlList)
+                {
+                    $Principal = $AccessControlItem.Principal
+                    $Identity = Resolve-Identity -Identity $Principal
+                    $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
+
+                    $ACLRules = ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
+
+                    $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
+
+                    $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce
+
+                    $Expected += $Results.Rules
+                    $AbsentToBeRemoved += $Results.Absent
+
+                    if($AccessControlItem.ForcePrinciPal)
+                    {
+                        $ToBeRemoved += $Results.ToBeRemoved
+                    }
+
+                }
+            }
+
+            foreach($Rule in $Expected)
+            {
+                if($Rule.Match -eq $false)
+                {
+                    $NonMatch = $Rule.Rule
+                    ("Found missing [present] permission rule:"),
+                    ("> Principal         : '{0}'" -f $Principal),
+                    ("> Path              : '{0}'" -f $Path),
+                    ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
+                    ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
+                    ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
+                    ("> InheritanceFlags  : '{0}'" -f $NonMatch.InheritanceFlags),
+                    ("> PropagationFlags  : '{0}'" -f $NonMatch.PropagationFlags) |
+                    Write-Verbose
+
+                    $InDesiredState = $False
+                }
+            }
+
+            if($AbsentToBeRemoved.Count -gt 0)
+            {
+                $NonMatch = $Rule.Rule
+                ("Found [absent] permission rule:"),
+                ("> Principal         : '{0}'" -f $Principal),
+                ("> Path              : '{0}'" -f $Path),
+                ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
+                ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
+                ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
+                ("> InheritanceFlags  : '{0}'" -f $NonMatch.InheritanceFlags),
+                ("> PropagationFlags  : '{0}'" -f $NonMatch.PropagationFlags) |
+                Write-Verbose
+
+                $InDesiredState = $False
+            }
+
+            if($ToBeRemoved.Count -gt 0)
+            {
+                $NonMatch = $Rule.Rule
+                ("Non-matching permission entry found:"),
+                ("> Principal         : '{0}'" -f $Principal),
+                ("> Path              : '{0}'" -f $Path),
+                ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
+                ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
+                ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
+                ("> InheritanceFlags  : '{0}'" -f $NonMatch.InheritanceFlags),
+                ("> PropagationFlags  : '{0}'" -f $NonMatch.PropagationFlags) |
+                Write-Verbose
+                $InDesiredState = $False
+            }
+        }
+        else
+        {
+            $message = $LocalizedData.AclNotFound -f $Path
+            Write-Verbose -Message $message
+            $InDesiredState = $False
+        }
     }
     else
     {
-        foreach($AccessControlItem in $AccessControlList)
-        {
-            $Principal = $AccessControlItem.Principal
-            $Identity = Resolve-Identity -Identity $Principal
-            $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
-
-            $ACLRules = ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
-
-            $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
-
-            $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce
-
-            $Expected += $Results.Rules
-            $AbsentToBeRemoved += $Results.Absent
-
-            if($AccessControlItem.ForcePrinciPal)
-            {
-                $ToBeRemoved += $Results.ToBeRemoved
-            }
-
-        }
+        $Message = $LocalizedData.ErrorPathNotFound -f $Path
+        Write-Verbose -Message $Message
+        $InDesiredState = $False
     }
-
-    foreach($Rule in $Expected)
-    {
-        if($Rule.Match -eq $false)
-        {
-            return $false
-        }
-    }
-
-    if($AbsentToBeRemoved.Count -gt 0)
-    {
-        return $false
-    }
-
-    if($ToBeRemoved.Count -gt 0)
-    {
-        return $false
-    }
-
-    return $true
+    
+    return $InDesiredState
 }
 
 Function Get-NtfsInheritenceFlags
@@ -303,7 +396,7 @@ Function Get-NtfsInheritenceFlags
     [CmdletBinding()]
     param
     (
-        [parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [System.String]
         $Inheritance
     )
@@ -360,13 +453,14 @@ Function Get-NtfsInheritenceFlags
 Function Get-NtfsInheritenceName
 {
     [CmdletBinding()]
+    [OutputType([System.String])]
     param
     (
-        [parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [System.String]
         $InheritanceFlag,
 
-        [parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [System.String]
         $PropagationFlag
     )
@@ -472,23 +566,6 @@ Function Compare-NtfsRules
         }
     }
 
-    foreach($refrenceObject in $Actual)
-    {
-        $match = $Expected.Rules.Where({
-            $_.FileSystemRights -eq $refrenceObject.FileSystemRights -and
-            $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
-            $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
-            $_.AccessControlType -eq $refrenceObject.AccessControlType -and
-            $_.IdentityReference -eq $refrenceObject.IdentityReference
-        })
-        if($match.Count -eq 0)
-        {
-            $ToBeRemoved += [PSCustomObject]@{
-                Rule = $refrenceObject
-            }
-        }
-    }
-
     foreach($refrenceObject in $AbsentRules)
     {
         $match = $Actual.Where({
@@ -501,6 +578,23 @@ Function Compare-NtfsRules
         if($match.Count -gt 0)
         {
             $AbsentToBeRemoved += [PSCustomObject]@{
+                Rule = $refrenceObject
+            }
+        }
+    }
+
+    foreach($refrenceObject in $Actual)
+    {
+        $match = $Expected.Rules.Where({
+            $_.FileSystemRights -eq $refrenceObject.FileSystemRights -and
+            $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
+            $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
+            $_.AccessControlType -eq $refrenceObject.AccessControlType -and
+            $_.IdentityReference -eq $refrenceObject.IdentityReference
+        })
+        if($match.Count -eq 0)
+        {
+            $ToBeRemoved += [PSCustomObject]@{
                 Rule = $refrenceObject
             }
         }
