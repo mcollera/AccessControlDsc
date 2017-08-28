@@ -1,4 +1,4 @@
-﻿[ClassVersion("0.9.0.0")]
+[ClassVersion("0.9.0.0")]
 class NTFSAccessControlEntry
 {
     [Required, Description("Indicates whether to allow or deny access to the target item."), ValueMap{"Allow","Deny"}, Values{"Allow","Deny"}] String AccessControlType;    
