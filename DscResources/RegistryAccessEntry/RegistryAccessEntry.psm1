@@ -7,7 +7,10 @@ data LocalizedData
 {
     # culture="en-US"
     ConvertFrom-StringData -StringData @'
-        ErrorPathNotFound = The requested path "{0}" cannot be found.
+        ErrorPathNotFound = The requested path "{0}" cannot be found. 
+        AclNotFound = Error obtaining "{0}" ACL 
+        AclFound = Obtained "{0}" ACL 
+        RemoveAccessError = "Unable to remove Access for "{0}" 
 '@
 }
 
@@ -34,43 +37,54 @@ Function Get-TargetResource
 
     if(-not (Test-Path -Path $Path))
     {
-        $errorMessage = $LocalizedData.ErrorPathNotFound -f $Path
-        throw $errorMessage
+        $message = $LocalizedData.ErrorPathNotFound -f $Path
+        Write-Verbose -Message $message
     }
 
     $currentACL = Get-Acl -Path $Path
 
     $CimAccessControlList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
 
-    foreach($Principal in $AccessControlList)
-    {
-        $CimAccessControlEntries = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
-
-        $PrincipalName = $Principal.Principal
-        $ForcePrincipal = $Principal.ForcePrincipal
-
-        $Identity = Resolve-Identity -Identity $PrincipalName
-        $currentPrincipalAccess = $currentACL.Access.Where({$_.IdentityReference -eq $Identity.Name})
-        foreach($Access in $currentPrincipalAccess)
+    if($null -ne $currentACL) 
+    { 
+        $message = $LocalizedData.AclFound -f $Path 
+        Write-Verbose -Message $message 
+        
+        foreach($Principal in $AccessControlList)
         {
-            $AccessControlType = $Access.AccessControlType.ToString()
-            $Rights = $Access.RegistryRights.ToString().Split(',').Trim()
-            $Inheritance = (Get-RegistryRuleInheritenceName -InheritanceFlag $Access.InheritanceFlags.value__ -PropagationFlag $Access.PropagationFlags.value__).ToString()
+            $CimAccessControlEntries = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
 
-            $CimAccessControlEntries += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName AccessControlEntry -Property @{
-                AccessControlType = $AccessControlType
-                Rights = @($Rights)
-                Inheritance = $Inheritance
-                Ensure = ""
+            $PrincipalName = $Principal.Principal
+            $ForcePrincipal = $Principal.ForcePrincipal
+
+            $Identity = Resolve-Identity -Identity $PrincipalName
+            $currentPrincipalAccess = $currentACL.Access.Where({$_.IdentityReference -eq $Identity.Name})
+            foreach($Access in $currentPrincipalAccess)
+            {
+                $AccessControlType = $Access.AccessControlType.ToString()
+                $Rights = $Access.RegistryRights.ToString().Split(',').Trim()
+                $Inheritance = (Get-RegistryRuleInheritenceName -InheritanceFlag $Access.InheritanceFlags.value__ -PropagationFlag $Access.PropagationFlags.value__).ToString()
+
+                $CimAccessControlEntries += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName AccessControlEntry -Property @{
+                    AccessControlType = $AccessControlType
+                    Rights = @($Rights)
+                    Inheritance = $Inheritance
+                    Ensure = ""
+                }
             }
-        }
 
-        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName AccessControlList -Property @{
-                        Principal = $PrincipalName
-                        ForcePrincipal = $ForcePrincipal
-                        AccessControlEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($CimAccessControlEntries)
-                    }
+            $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName AccessControlList -Property @{
+                            Principal = $PrincipalName
+                            ForcePrincipal = $ForcePrincipal
+                            AccessControlEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($CimAccessControlEntries)
+                        }
+        }
     }
+    else 
+    { 
+        $message = $LocalizedData.AclNotFound -f $Path 
+        Write-Verbose -Message $message 
+    } 
 
     $ReturnValue = @{
         Force = $Force
@@ -193,7 +207,8 @@ Function Set-TargetResource
             }
             catch
             {
-                Write-Verbose "Unable to remove Access for $($Rule.IdentityReference.Value)"
+                $message = $LocalizedData.AclNotFound -f $($Rule.IdentityReference.Value) 
+                Write-Verbose -Message $message 
             }
         }
     }
