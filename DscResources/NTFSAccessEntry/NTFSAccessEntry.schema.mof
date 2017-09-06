@@ -19,6 +19,6 @@ class NTFSAccessControlList
 class NTFSAccessEntry : OMI_BaseResource
 {
     [Key, Description("Indicates the path to the target item.")] String Path;
-    [Write, Description("Indicates the access control information in the form of an array of instances of the RegistryRule CIM class."), EmbeddedInstance("NTFSAccessControlList")] String AccessControlList[];
+    [Required, Description("Indicates the access control information in the form of an array of instances of the RegistryRule CIM class."), EmbeddedInstance("NTFSAccessControlList")] String AccessControlList[];
     [Write] Boolean Force;
 };
