@@ -196,7 +196,7 @@ Function Set-TargetResource
                     ("> ActiveDirectoryRights : '{0}'" -f $NonMatch.ActiveDirectoryRights),
                     ("> AuditFlags            : '{0}'" -f $NonMatch.AuditFlags),
                     ("> InheritanceType       : '{0}'" -f $NonMatch.InheritanceType),
-                    ("> InheritanceTypeObject : '{0}'" -f $NonMatch.InheritanceTypeObject) |
+                    ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType)) |
                     Write-Verbose
 
                     $currentAcl.AddAuditRule($Rule.Rule)
@@ -212,7 +212,7 @@ Function Set-TargetResource
                 ("> ActiveDirectoryRights : '{0}'" -f $NonMatch.ActiveDirectoryRights),
                 ("> AuditFlags            : '{0}'" -f $NonMatch.AuditFlags),
                 ("> InheritanceType       : '{0}'" -f $NonMatch.InheritanceType),
-                ("> InheritanceTypeObject : '{0}'" -f $NonMatch.InheritanceTypeObject) |
+                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType)) |
                 Write-Verbose
 
                 $currentAcl.RemoveAuditRule($Rule)
@@ -227,7 +227,7 @@ Function Set-TargetResource
                 ("> ActiveDirectoryRights : '{0}'" -f $NonMatch.ActiveDirectoryRights),
                 ("> AuditFlags            : '{0}'" -f $NonMatch.AuditFlags),
                 ("> InheritanceType       : '{0}'" -f $NonMatch.InheritanceType),
-                ("> InheritanceTypeObject : '{0}'" -f $NonMatch.InheritanceTypeObject) |
+                ("> InheritedObjectType : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType)) |
                 Write-Verbose
                 $currentAcl.RemoveAuditRule($Rule)
             }
@@ -334,7 +334,7 @@ Function Test-TargetResource
                     ("> ActiveDirectoryRights : '{0}'" -f $NonMatch.ActiveDirectoryRights),
                     ("> AuditFlags            : '{0}'" -f $NonMatch.AuditFlags),
                     ("> InheritanceType       : '{0}'" -f $NonMatch.InheritanceType),
-                    ("> InheritanceTypeObject : '{0}'" -f $NonMatch.InheritanceTypeObject) |
+                    ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType)) |
                     Write-Verbose
 
                     $InDesiredState = $False
@@ -351,7 +351,7 @@ Function Test-TargetResource
                 ("> ActiveDirectoryRights : '{0}'" -f $NonMatch.ActiveDirectoryRights),
                 ("> AuditFlags            : '{0}'" -f $NonMatch.AuditFlags),
                 ("> InheritanceType       : '{0}'" -f $NonMatch.InheritanceType),
-                ("> InheritanceTypeObject : '{0}'" -f $NonMatch.InheritanceTypeObject) |
+                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType))|
                 Write-Verbose
 
                 $InDesiredState = $False
@@ -367,7 +367,7 @@ Function Test-TargetResource
                 ("> ActiveDirectoryRights : '{0}'" -f $NonMatch.ActiveDirectoryRights),
                 ("> AuditFlags            : '{0}'" -f $NonMatch.AuditFlags),
                 ("> InheritanceType       : '{0}'" -f $NonMatch.InheritanceType),
-                ("> InheritanceTypeObject : '{0}'" -f $NonMatch.InheritanceTypeObject) |
+                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType)) |
                 Write-Verbose
                 $InDesiredState = $False
             }
@@ -406,9 +406,9 @@ Function ConvertTo-ActiveDirectoryAuditRule
 
     foreach($ace in $AccessControlList.AccessControlEntry)
     {
-        $InheritanceTypeObject = Get-SchemaIdGuid -ObjectName $ace.InheritanceTypeObject
+        $InheritedObjectType = Get-SchemaIdGuid -ObjectName $ace.InheritedObjectType
         $rule = [PSCustomObject]@{
-            Rules = [System.DirectoryServices.ActiveDirectoryAuditRule]::new($IdentityRef, $ace.ActiveDirectoryRights, $ace.AuditFlags, $ace.InheritanceType, $InheritanceTypeObject)
+            Rules = [System.DirectoryServices.ActiveDirectoryAuditRule]::new($IdentityRef, $ace.ActiveDirectoryRights, $ace.AuditFlags, $ace.InheritanceType, $InheritedObjectType)
             Ensure = $ace.Ensure
         }
         $refrenceObject += $rule
@@ -437,12 +437,12 @@ Function Compare-ActiveDirectoryAuditRule
     $PresentRules = $Expected.Where({$_.Ensure -eq 'Present'}).Rules
     $AbsentRules = $Expected.Where({$_.Ensure -eq 'Absent'}).Rules
     foreach($refrenceObject in $PresentRules)
-    {
+    { 
         $match = $Actual.Where({
             $_.ActiveDirectoryRights -eq $refrenceObject.ActiveDirectoryRights -and
             $_.AuditFlags -eq $refrenceObject.AuditFlags -and
             $_.InheritanceType -eq $refrenceObject.InheritanceType -and
-            $_.InheritanceTypeObject -eq $refrenceObject.InheritanceTypeObject -and
+            $_.InheritedObjectType -eq $refrenceObject.InheritedObjectType -and
             $_.IdentityReference -eq $refrenceObject.IdentityReference
         })
         if($match.Count -ge 1)
@@ -467,7 +467,7 @@ Function Compare-ActiveDirectoryAuditRule
             $_.ActiveDirectoryRights -eq $refrenceObject.ActiveDirectoryRights -and
             $_.AuditFlags -eq $refrenceObject.AuditFlags -and
             $_.InheritanceType -eq $refrenceObject.InheritanceType -and
-            $_.InheritanceTypeObject -eq $refrenceObject.InheritanceTypeObject -and
+            $_.InheritedObjectType -eq $refrenceObject.InheritedObjectType -and
             $_.IdentityReference -eq $refrenceObject.IdentityReference
         })
         if($match.Count -gt 0)
@@ -484,7 +484,7 @@ Function Compare-ActiveDirectoryAuditRule
             $_.ActiveDirectoryRights -eq $refrenceObject.ActiveDirectoryRights -and
             $_.AuditFlags -eq $refrenceObject.AuditFlags -and
             $_.InheritanceType -eq $refrenceObject.InheritanceType -and
-            $_.InheritanceTypeObject -eq $refrenceObject.InheritanceTypeObject -and
+            $_.InheritedObjectType -eq $refrenceObject.InheritedObjectType -and
             $_.IdentityReference -eq $refrenceObject.IdentityReference
         })
         if($match.Count -eq 0)
@@ -537,4 +537,17 @@ Function Get-SchemaIdGuid
     {
         return [system.guid]"00000000-0000-0000-0000-000000000000"
     }
+}
+
+Function Get-SchemaObjectName
+{
+    Param 
+    (
+        [Parameter()]
+        [guid]
+        $SchemaIdGuid
+    )
+
+        $value = Get-ADObject -filter {schemaIDGUID  -eq $SchemaIdGuid} -SearchBase (Get-ADRootDSE).schemaNamingContext -prop schemaIDGUID
+        return $value.name 
 }
