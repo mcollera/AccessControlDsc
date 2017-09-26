@@ -134,7 +134,7 @@ Function Set-TargetResource
         
                 $actualAce = $currentAcl.Access
 
-                $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce
+                $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce -Force $AccessControlItem.ForcePrincipal
 
                 $Expected = $Results.Rules
                 $AbsentToBeRemoved = $Results.Absent
@@ -151,7 +151,7 @@ Function Set-TargetResource
                     $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
                     $ACLRules = ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
-                    $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce
+                    $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce -Force $AccessControlItem.ForcePrincipal
 
                     $Expected += $Results.Rules
                     $AbsentToBeRemoved += $Results.Absent
@@ -172,41 +172,7 @@ Function Set-TargetResource
                 $currentAcl.SetAccessRuleProtection($true,$true)
                 Set-Acl -Path $Path -AclObject $currentAcl
             }
-
-            foreach($Rule in $Expected)
-            {
-                if($Rule.Match -eq $false)
-                {
-                    $NonMatch = $Rule.Rule
-                    ("Adding access rule:"),
-                    ("> Principal         : '{0}'" -f $Principal),
-                    ("> Path              : '{0}'" -f $Path),
-                    ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
-                    ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
-                    ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
-                    ("> InheritanceFlags  : '{0}'" -f $NonMatch.InheritanceFlags),
-                    ("> PropagationFlags  : '{0}'" -f $NonMatch.PropagationFlags) |
-                    Write-Verbose
-
-                    $currentAcl.AddAccessRule($Rule.Rule)
-                }
-            }
-
-            foreach($Rule in $AbsentToBeRemoved.Rule)
-            {
-                $NonMatch = $Rule.Rule
-                ("Removing access rule:"),
-                ("> Principal         : '{0}'" -f $Principal),
-                ("> Path              : '{0}'" -f $Path),
-                ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
-                ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
-                ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
-                ("> InheritanceFlags  : '{0}'" -f $NonMatch.InheritanceFlags),
-                ("> PropagationFlags  : '{0}'" -f $NonMatch.PropagationFlags) |
-                Write-Verbose
-
-                $currentAcl.RemoveAccessRule($Rule)
-            }
+            
 
             foreach($Rule in $ToBeRemoved.Rule)
             {
@@ -238,6 +204,41 @@ Function Set-TargetResource
                         $message = $LocalizedData.AclNotFound -f $($Rule.IdentityReference.Value)
                         Write-Verbose -Message $message
                     }
+                }
+            }
+
+            foreach($Rule in $AbsentToBeRemoved.Rule)
+            {
+                $NonMatch = $Rule.Rule
+                ("Removing access rule:"),
+                ("> Principal         : '{0}'" -f $Principal),
+                ("> Path              : '{0}'" -f $Path),
+                ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
+                ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
+                ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
+                ("> InheritanceFlags  : '{0}'" -f $NonMatch.InheritanceFlags),
+                ("> PropagationFlags  : '{0}'" -f $NonMatch.PropagationFlags) |
+                Write-Verbose
+
+                $currentAcl.RemoveAccessRule($Rule)
+            }                      
+
+            foreach($Rule in $Expected)
+            {
+                if($Rule.Match -eq $false)
+                {
+                    $NonMatch = $Rule.Rule
+                    ("Adding access rule:"),
+                    ("> Principal         : '{0}'" -f $Principal),
+                    ("> Path              : '{0}'" -f $Path),
+                    ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
+                    ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
+                    ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
+                    ("> InheritanceFlags  : '{0}'" -f $NonMatch.InheritanceFlags),
+                    ("> PropagationFlags  : '{0}'" -f $NonMatch.PropagationFlags) |
+                    Write-Verbose
+
+                    $currentAcl.AddAccessRule($Rule.Rule)
                 }
             }
 
@@ -296,7 +297,7 @@ Function Test-TargetResource
         
                 $actualAce = $currentAcl.Access
 
-                $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce
+                $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce -Force $AccessControlItem.ForcePrincipal
 
                 $Expected = $Results.Rules
                 $AbsentToBeRemoved = $Results.Absent
@@ -314,7 +315,7 @@ Function Test-TargetResource
 
                     $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
-                    $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce
+                    $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce -Force $AccessControlItem.ForcePrincipal
 
                     $Expected += $Results.Rules
                     $AbsentToBeRemoved += $Results.Absent
@@ -535,7 +536,11 @@ Function Compare-NtfsRules
 
         [Parameter()]
         [System.Security.AccessControl.FileSystemAccessRule[]]
-        $Actual
+        $Actual,
+
+        [Parameter()]
+        [bool]
+        $Force = $false
     )
 
     $results = @()
@@ -547,7 +552,7 @@ Function Compare-NtfsRules
     foreach($refrenceObject in $PresentRules)
     {
         $match = $Actual.Where({
-            $_.FileSystemRights -eq $refrenceObject.FileSystemRights -and
+            (((($_.FileSystemRights.value__ -band $refrenceObject.FileSystemRights.value__) -match "$($_.FileSystemRights.value__)|$($refrenceObject.FileSystemRights.value__)") -and !$Force) -or ($_.FileSystemRights -eq $refrenceObject.FileSystemRights -and $Force)) -and
             $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
             $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
             $_.AccessControlType -eq $refrenceObject.AccessControlType -and
@@ -572,7 +577,7 @@ Function Compare-NtfsRules
     foreach($refrenceObject in $AbsentRules)
     {
         $match = $Actual.Where({
-            $_.FileSystemRights -eq $refrenceObject.FileSystemRights -and
+            (((($_.FileSystemRights.value__ -band $refrenceObject.FileSystemRights.value__) -match "$($_.FileSystemRights.value__)|$($refrenceObject.FileSystemRights.value__)") -and !$Force) -or ($_.FileSystemRights -eq $refrenceObject.FileSystemRights -and $Force)) -and
             $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
             $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
             $_.AccessControlType -eq $refrenceObject.AccessControlType -and
@@ -589,7 +594,7 @@ Function Compare-NtfsRules
     foreach($refrenceObject in $Actual)
     {
         $match = $Expected.Rules.Where({
-            $_.FileSystemRights -eq $refrenceObject.FileSystemRights -and
+            (((($_.FileSystemRights.value__ -band $refrenceObject.FileSystemRights.value__) -match "$($_.FileSystemRights.value__)|$($refrenceObject.FileSystemRights.value__)") -and !$Force) -or ($_.FileSystemRights -eq $refrenceObject.FileSystemRights -and $Force)) -and
             $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
             $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
             $_.AccessControlType -eq $refrenceObject.AccessControlType -and
