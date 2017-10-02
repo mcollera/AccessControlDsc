@@ -47,7 +47,6 @@ function Resolve-Identity
         {
             $ErrorMessage = "Could not resolve identity '{0}': '{1}'." -f $Identity, $_.Exception.Message
             Write-Error -Exception $_.Exception -Message $ErrorMessage
-            return
         }
     }
 }
