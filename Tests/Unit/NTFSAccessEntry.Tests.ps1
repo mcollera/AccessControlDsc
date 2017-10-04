@@ -1,4 +1,6 @@
-#*** MUST RUN AS ADMINISTRATOR***
+#requires -Version 4.0 -Modules Pester
+#requires -RunAsAdministrator
+
 #region Setup for tests
 $Global:DSCModuleName = 'AccessControlDsc'
 $Global:DSCResourceName = 'NTFSAccessEntry'
@@ -316,13 +318,13 @@ Describe "$Global:DSCResourceName\Test-TargetResource behavior with Ensure set t
         }
         $TempAccessRules = @(
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
-                   -ArgumentList @(
-                       $TempAcl.Principal,
-                       @('CreateFiles', 'AppendData'),
-                       @('ContainerInherit', 'ObjectInherit'),
-                       'InheritOnly',
-                       'Allow'
-                   )
+               -ArgumentList @(
+                   $TempAcl.Principal,
+                   @('CreateFiles', 'AppendData'),
+                   @('ContainerInherit', 'ObjectInherit'),
+                   'InheritOnly',
+                   'Allow'
+               )
         )
 
         Set-NewTempItemAcl -ItemType Directory -Path $ContextParams.Path -AccessRulesToAdd $TempAccessRules
