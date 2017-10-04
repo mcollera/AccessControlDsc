@@ -30,7 +30,7 @@ Function Get-TargetResource
 
         [Parameter()]
         [bool]
-        $Force = $false
+        $ForcePrincipal = $false
     )
 
     $NameSpace = "root/Microsoft/Windows/DesiredStateConfiguration"
@@ -90,7 +90,7 @@ Function Get-TargetResource
     }
 
     $ReturnValue = @{
-        Force = $Force
+        Force = $ForcePrincipal
         Path = $Path
         AccessControlList = $CimAccessControlList
     }
@@ -113,7 +113,7 @@ Function Set-TargetResource
 
         [Parameter()]
         [bool]
-        $Force = $false
+        $ForcePrincipal = $false
     )
 
     if(Test-Path -Path $Path)
@@ -121,7 +121,7 @@ Function Set-TargetResource
         $currentAcl = Get-Acl -Path $Path
         if($null -ne $currentAcl)
         {
-            if($Force)
+            if($ForcePrincipal)
             {
                 foreach($AccessControlItem in $AccessControlList)
                 {
@@ -178,15 +178,14 @@ Function Set-TargetResource
             {
                 try
                 {
-                    $NonMatch = $Rule.Rule
                     ("Removing access rule:"),
                     ("> Principal         : '{0}'" -f $Principal),
                     ("> Path              : '{0}'" -f $Path),
-                    ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
-                    ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
-                    ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
-                    ("> InheritanceFlags  : '{0}'" -f $NonMatch.InheritanceFlags),
-                    ("> PropagationFlags  : '{0}'" -f $NonMatch.PropagationFlags) |
+                    ("> IdentityReference : '{0}'" -f $Rule.IdentityReference),
+                    ("> AccessControlType : '{0}'" -f $Rule.AccessControlType),
+                    ("> FileSystemRights  : '{0}'" -f $Rule.FileSystemRights),
+                    ("> InheritanceFlags  : '{0}'" -f $Rule.InheritanceFlags),
+                    ("> PropagationFlags  : '{0}'" -f $Rule.PropagationFlags) |
                     Write-Verbose
                     $currentAcl.RemoveAccessRule($Rule)
                 }
@@ -209,15 +208,14 @@ Function Set-TargetResource
 
             foreach($Rule in $AbsentToBeRemoved.Rule)
             {
-                $NonMatch = $Rule.Rule
                 ("Removing access rule:"),
                 ("> Principal         : '{0}'" -f $Principal),
                 ("> Path              : '{0}'" -f $Path),
-                ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
-                ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
-                ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
-                ("> InheritanceFlags  : '{0}'" -f $NonMatch.InheritanceFlags),
-                ("> PropagationFlags  : '{0}'" -f $NonMatch.PropagationFlags) |
+                ("> IdentityReference : '{0}'" -f $Rule.IdentityReference),
+                ("> AccessControlType : '{0}'" -f $Rule.AccessControlType),
+                ("> FileSystemRights  : '{0}'" -f $Rule.FileSystemRights),
+                ("> InheritanceFlags  : '{0}'" -f $Rule.InheritanceFlags),
+                ("> PropagationFlags  : '{0}'" -f $Rule.PropagationFlags) |
                 Write-Verbose
 
                 $currentAcl.RemoveAccessRule($Rule)
@@ -270,7 +268,7 @@ Function Test-TargetResource
 
         [Parameter()]
         [bool]
-        $Force = $false
+        $ForcePrincipal = $false
     )
 
     $InDesiredState = $True
@@ -281,7 +279,7 @@ Function Test-TargetResource
 
         if($null -ne $currentACL)
         {
-            if($Force)
+            if($ForcePrincipal)
             {
                 foreach($AccessControlItem in $AccessControlList)
                 {
@@ -346,32 +344,37 @@ Function Test-TargetResource
 
             if($AbsentToBeRemoved.Count -gt 0)
             {
-                $NonMatch = $Rule.Rule
-                ("Found [absent] permission rule:"),
-                ("> Principal         : '{0}'" -f $Principal),
-                ("> Path              : '{0}'" -f $Path),
-                ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
-                ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
-                ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
-                ("> InheritanceFlags  : '{0}'" -f $NonMatch.InheritanceFlags),
-                ("> PropagationFlags  : '{0}'" -f $NonMatch.PropagationFlags) |
-                Write-Verbose
+                foreach ($rule in $AbsentToBeRemoved)
+                {
+                    ("Found [absent] permission rule:"),
+                    ("> Principal         : '{0}'" -f $Principal),
+                    ("> Path              : '{0}'" -f $Path),
+                    ("> IdentityReference : '{0}'" -f $Rule.IdentityReference),
+                    ("> AccessControlType : '{0}'" -f $Rule.AccessControlType),
+                    ("> FileSystemRights  : '{0}'" -f $Rule.FileSystemRights),
+                    ("> InheritanceFlags  : '{0}'" -f $Rule.InheritanceFlags),
+                    ("> PropagationFlags  : '{0}'" -f $Rule.PropagationFlags) |
+                    Write-Verbose
+                }
 
                 $InDesiredState = $False
             }
 
             if($ToBeRemoved.Count -gt 0)
             {
-                $NonMatch = $Rule.Rule
-                ("Non-matching permission entry found:"),
-                ("> Principal         : '{0}'" -f $Principal),
-                ("> Path              : '{0}'" -f $Path),
-                ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
-                ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
-                ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
-                ("> InheritanceFlags  : '{0}'" -f $NonMatch.InheritanceFlags),
-                ("> PropagationFlags  : '{0}'" -f $NonMatch.PropagationFlags) |
-                Write-Verbose
+                foreach ($Rule in $ToBeRemoved)
+                {
+                    ("Non-matching permission entry found:"),
+                    ("> Principal         : '{0}'" -f $Principal),
+                    ("> Path              : '{0}'" -f $Path),
+                    ("> IdentityReference : '{0}'" -f $Rule.IdentityReference),
+                    ("> AccessControlType : '{0}'" -f $Rule.AccessControlType),
+                    ("> FileSystemRights  : '{0}'" -f $Rule.FileSystemRights),
+                    ("> InheritanceFlags  : '{0}'" -f $Rule.InheritanceFlags),
+                    ("> PropagationFlags  : '{0}'" -f $Rule.PropagationFlags) |
+                    Write-Verbose
+                }
+
                 $InDesiredState = $False
             }
         }
