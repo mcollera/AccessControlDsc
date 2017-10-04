@@ -30,7 +30,7 @@ Function Get-TargetResource
 
         [Parameter()]
         [bool]
-        $ForcePrincipal = $false
+        $Force = $false
     )
 
     $NameSpace = "root/Microsoft/Windows/DesiredStateConfiguration"
@@ -90,7 +90,7 @@ Function Get-TargetResource
     }
 
     $ReturnValue = @{
-        Force = $ForcePrincipal
+        Force = $Force
         Path = $Path
         AccessControlList = $CimAccessControlList
     }
@@ -113,7 +113,7 @@ Function Set-TargetResource
 
         [Parameter()]
         [bool]
-        $ForcePrincipal = $false
+        $Force = $false
     )
 
     if(Test-Path -Path $Path)
@@ -121,7 +121,7 @@ Function Set-TargetResource
         $currentAcl = Get-Acl -Path $Path
         if($null -ne $currentAcl)
         {
-            if($ForcePrincipal)
+            if($Force)
             {
                 foreach($AccessControlItem in $AccessControlList)
                 {
@@ -268,7 +268,7 @@ Function Test-TargetResource
 
         [Parameter()]
         [bool]
-        $ForcePrincipal = $false
+        $Force = $false
     )
 
     $InDesiredState = $True
@@ -279,7 +279,7 @@ Function Test-TargetResource
 
         if($null -ne $currentACL)
         {
-            if($ForcePrincipal)
+            if($Force)
             {
                 foreach($AccessControlItem in $AccessControlList)
                 {
