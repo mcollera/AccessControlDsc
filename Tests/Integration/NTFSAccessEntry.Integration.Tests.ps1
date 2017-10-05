@@ -4,6 +4,9 @@
 $Global:DSCModuleName   = 'AccessControlDSC'
 $Global:DSCResourceName = 'NTFSAccessEntry'
 
+Import-Module "$($PSScriptRoot)\..\..\DSCResources\$($Global:DSCResourceName)\$($Global:DSCResourceName).psm1" -Force
+Import-Module Pester -Force
+
 try
 {
     $ConfigFile = Join-Path -Path $PSScriptRoot -ChildPath "$($Global:DSCResourceName).Config.ps1"
