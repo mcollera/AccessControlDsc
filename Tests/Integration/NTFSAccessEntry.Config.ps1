@@ -8,7 +8,7 @@ $TestParameter = [PSCustomObject]@{
 
 Configuration NTFSAccessEntry_Test
 {
-    Import-DscResource -ModuleName AccessControlDsc
+    Import-Module "$($PSScriptRoot)\..\..\DSCResources\$($Global:DSCResourceName)\$($Global:DSCResourceName).psm1" -Force
 
     Node localhost
     {
