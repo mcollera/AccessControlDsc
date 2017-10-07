@@ -1,11 +1,29 @@
 #requires -Version 4.0 -Modules Pester
 #requires -RunAsAdministrator
 
+#region Set up for tests
 $Global:DSCModuleName   = 'AccessControlDSC'
 $Global:DSCResourceName = 'NTFSAccessEntry'
 
-Import-Module "$($PSScriptRoot)\..\..\DSCResources\$($Global:DSCResourceName)\$($Global:DSCResourceName).psm1" -Force
-Import-Module Pester -Force
+$ModuleRoot = Split-Path -Path $Script:MyInvocation.MyCommand.Path -Parent | Split-Path -Parent | Split-Path -Parent
+
+if (
+    (-not (Test-Path -Path (Join-Path -Path $ModuleRoot -ChildPath 'DSCResource.Tests') -PathType Container)) -or
+    (-not (Test-Path -Path (Join-Path -Path $ModuleRoot -ChildPath 'DSCResource.Tests\TestHelper.psm1') -PathType Leaf))
+)
+{
+    & git @('clone', 'https://github.com/PowerShell/DscResource.Tests.git', (Join-Path -Path $ModuleRoot -ChildPath 'DSCResource.Tests'))
+}
+
+Import-Module -Name (Join-Path -Path $ModuleRoot -ChildPath 'DSCResource.Tests\TestHelper.psm1') -Force
+
+$TestEnvironment = Initialize-TestEnvironment `
+    -DSCModuleName $Global:DSCModuleName `
+    -DSCResourceName $Global:DSCResourceName `
+    -TestType Integration
+
+#endregion
+
 
 try
 {
@@ -19,7 +37,6 @@ try
     $Acl.Access.Where({-not $_.IsInherited}).ForEach({[Void]$Acl.RemoveAccessRule($_)})
     [System.IO.Directory]::SetAccessControl($TestDirectory.FullName, $Acl)
 
-    #Integration Tests
     Describe "$($Global:DSCResourceName)_Integration" {
 
         $ConfigurationName = "$($Global:DSCResourceName)_Test"
@@ -37,6 +54,7 @@ try
         }
 
         It 'Should have set the resource and all the parameters should match' {
+
             $CurrentConfiguration = Get-DscConfiguration | Where-Object -FilterScript {$_.ConfigurationName -eq $ConfigurationName}
 
             $CurrentConfiguration.AccessControlList.ForcePrincipal | Should Be $TestParameter.ForcePrincipal
@@ -51,7 +69,9 @@ try
 }
 finally
 {
-    # Remove temporary directory
+    Restore-TestEnvironment -TestEnvironment $TestEnvironment
+
+    #Remove temporary directory
     if ($TestDirectory)
     {
         Remove-Item -Path $TestDirectory.FullName -Force -Recurse -Verbose

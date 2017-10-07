@@ -8,7 +8,7 @@ $TestParameter = [PSCustomObject]@{
 
 Configuration NTFSAccessEntry_Test
 {
-    Import-DscResource  -Name NTFSAccessEntry
+    Import-DscResource  -Name "NTFSAccessEntry"
 
     Node localhost
     {
