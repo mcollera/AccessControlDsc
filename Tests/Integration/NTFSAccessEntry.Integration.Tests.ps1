@@ -54,10 +54,12 @@ try
         }
 
         It 'Should have set the resource and all the parameters should match' {
+            
+            Start-DscConfiguration -Path $TestParameter.Path -ComputerName localhost -Force -Verbose -Wait
 
             $CurrentConfiguration = Get-DscConfiguration | Where-Object -FilterScript {$_.ConfigurationName -eq $ConfigurationName}
 
-            #$CurrentConfiguration.AccessControlList.ForcePrincipal | Should Be $TestParameter.ForcePrincipal
+            $CurrentConfiguration.AccessControlList.ForcePrincipal | Should Be $TestParameter.ForcePrincipal
             $CurrentConfiguration.Path | Should Be $TestParameter.Path
             $CurrentConfiguration.AccessControlList.Principal | Should Be $TestParameter.Principal
         }
