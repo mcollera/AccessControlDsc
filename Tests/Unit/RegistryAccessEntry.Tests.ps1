@@ -1,4 +1,6 @@
-﻿#*** MUST RUN AS ADMINISTRATOR***
+﻿#requires -Version 4.0 -Modules Pester
+#requires -RunAsAdministrator
+
 #region Setup for tests
 $Global:DSCModuleName = 'AccessControlDsc'
 $Global:DSCResourceName = 'RegistryAccessEntry'
