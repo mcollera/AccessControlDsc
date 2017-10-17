@@ -79,10 +79,10 @@ finally
 #    Restore-TestEnvironment -TestEnvironment $TestEnvironment
 #
 #    #Remove temporary directory
-    if (Test-Path $TestParameter.path)
-    {
-        Remove-Item -Path $TestParameter.path -Force -Recurse -Verbose
-    }
+#    if (Test-Path $TestParameter.path)
+#    {
+#        Remove-Item -Path $TestParameter.path -Force -Recurse -Verbose
+#    }
     if (Test-Path $configPath)
     {
         Remove-Item -Path $configPath -Force -Recurse -Verbose
