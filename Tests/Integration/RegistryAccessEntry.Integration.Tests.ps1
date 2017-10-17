@@ -83,8 +83,8 @@ finally
 #    {
 #        Remove-Item -Path $TestParameter.path -Force -Recurse -Verbose
 #    }
-    if (Test-Path $configPath)
-    {
-        Remove-Item -Path $configPath -Force -Recurse -Verbose
-    }
+#    if (Test-Path $configPath)
+#    {
+#        Remove-Item -Path $configPath -Force -Recurse -Verbose
+#    }
 }
