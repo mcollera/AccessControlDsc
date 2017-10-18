@@ -25,7 +25,7 @@ $TestEnvironment = Initialize-TestEnvironment `
     -DSCResourceName $Global:DSCResourceName `
     -TestType Integration
 
-endregion
+#endregion
 
 
 try
