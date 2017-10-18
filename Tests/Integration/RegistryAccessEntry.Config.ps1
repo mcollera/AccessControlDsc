@@ -1,7 +1,7 @@
 ﻿$TestParameter = [PSCustomObject]@{
     Ensure = 'Present'
     Path = 'HKLM:\Software\TestKey'
-    Principal = 'BUILTIN\Users'
+    Principal = 'Everyone'
     ForcePrincipal = $true
 }
 
