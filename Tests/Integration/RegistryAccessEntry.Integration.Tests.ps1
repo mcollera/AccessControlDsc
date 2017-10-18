@@ -25,7 +25,7 @@ $TestEnvironment = Initialize-TestEnvironment `
     -DSCResourceName $Global:DSCResourceName `
     -TestType Integration
 
-#endregion
+endregion
 
 
 try
@@ -63,6 +63,8 @@ try
             Start-DscConfiguration -Path $configPath -ComputerName localhost -Force -Verbose -Wait
 
             $CurrentConfiguration = Get-DscConfiguration | Where-Object -FilterScript {$_.ConfigurationName -eq $ConfigurationName}
+
+            Test-Path -Path $TestParameter.Path
 
             $CurrentConfiguration.AccessControlList.ForcePrincipal | Should Be $TestParameter.ForcePrincipal
             $CurrentConfiguration.Path | Should Be $TestParameter.Path

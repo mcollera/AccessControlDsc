@@ -1,7 +1,7 @@
 $TestParameter = [PSCustomObject]@{
     Ensure = 'Present'
     Path = (Join-Path -Path ([System.IO.Path]::GetTempPath()) -ChildPath ([Guid]::NewGuid().Guid))
-    Principal = 'BUILTIN\Users'
+    Principal = 'Everyone'
     ForcePrincipal = $true
 }
 
