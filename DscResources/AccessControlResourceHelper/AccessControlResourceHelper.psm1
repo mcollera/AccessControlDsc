@@ -65,7 +65,6 @@ function Resolve-Identity
 
 function ConvertTo-SID
 {
-
     Param
     (
         [Parameter(Mandatory = $true)]
