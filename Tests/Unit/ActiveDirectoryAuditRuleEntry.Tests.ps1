@@ -9,16 +9,13 @@
 $Global:DSCModuleName = 'AccessControlDsc'
 
 $Global:DSCResourceName = 'ActiveDirectoryAuditRuleEntry'
-
-
-
 Import-Module "$($PSScriptRoot)\..\..\DSCResources\$($Global:DSCResourceName)\$($Global:DSCResourceName).psm1" -Force
 
 Import-Module "$($PSScriptRoot)\..\..\DscResources\AccessControlResourceHelper\AccessControlResourceHelper.psm1" -Force
 
 Import-Module Pester -Force
-
 #endregion
+InModuleScope ActiveDirectoryAuditRuleEntry {
 
 #region Helper Functions
 
@@ -590,3 +587,4 @@ Describe "$Global:DSCResourceName\Test-TargetResource" {
         }
     }
     
+}
