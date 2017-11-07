@@ -1,260 +1,114 @@
 #requires -Version 4.0 -Modules Pester
-
 #requires -RunAsAdministrator
-
-
 
 #region Setup for tests
 
 $Global:DSCModuleName = 'AccessControlDsc'
-
 $Global:DSCResourceName = 'ActiveDirectoryAuditRuleEntry'
+
 Import-Module "$($PSScriptRoot)\..\..\DSCResources\$($Global:DSCResourceName)\$($Global:DSCResourceName).psm1" -Force
-
 Import-Module "$($PSScriptRoot)\..\..\DscResources\AccessControlResourceHelper\AccessControlResourceHelper.psm1" -Force
-
+Import-Module "$($PSScriptRoot)\..\TestHelper.psm1" -Force
 Import-Module Pester -Force
 #endregion
+
 InModuleScope ActiveDirectoryAuditRuleEntry {
 
-#region Helper Functions
+    Describe "$Global:DSCResourceName\Get-TargetResource" {
 
-function New-AuditAccessControlList
-{
-<#
-    .SYNOPSIS
-    Creates an Access Control List Ciminstance
-    
-    .PARAMETER Principal
-    Name of the principal which access rights are being managed 
-    
-    .PARAMETER ForcePrincipal
-        Used to force the desired access rule
-    
-    .PARAMETER AccessControlType
-    States if the principal should be will be allowed or denied access
-    
-    .PARAMETER FileSystemRights
-    What rights the principal is being given over an object
-    
-    .PARAMETER Inheritance
-    The inheritance properties of the object being managed
-    
-    .PARAMETER Ensure
-    Either Present or Absent
-#>
-    param
-    (
-        [Parameter(Mandatory = $true)]
-        $Principal,
+        Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" }
+        Mock -CommandName Test-Path -MockWith { return $true }
+        Mock -CommandName Assert-Module -MockWith {}
+        Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'}
 
-        [Parameter(Mandatory = $true)]
-        [boolean]
-        $ForcePrincipal,
-
-        [Parameter(Mandatory = $false)]
-        [ValidateSet("Failure","Success")]
-        [string]
-        $AuditFlags,
-
-        [Parameter(Mandatory = $false)]
-        [ValidateSet("AccessSystemSecurity","CreateChild","Delete","DeleteChild","DeleteTree","ExtendedRight","GenericAll","GenericExecute","GenericRead","GenericWrite","ListChildren","ListObject","ReadControl","ReadProperty","Self","WriteDacl","WriteOwner","WriteProperty")]
-        $ActiveDirectoryRights,
+        Context "Should return current Audit Rules" {
+            Mock -CommandName Get-Acl -MockWith {
+                $collection = [System.Security.AccessControl.AuthorizationRuleCollection]::new()
+                $Identity = Resolve-Identity -Identity "Everyone"
+                $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
+                $auditRule = [System.DirectoryServices.ActiveDirectoryAuditRule]::new($IdentityRef, [System.DirectoryServices.ActiveDirectoryRights]::Delete , [System.Security.AccessControl.AuditFlags]::Success, ([System.Security.AccessControl.InheritanceFlags]::ContainerInherit,[System.Security.AccessControl.InheritanceFlags]::ObjectInherit) , [guid]"52ea1a9a-be7e-4213-9e69-5f28cb89b56a")
+                $auditRule2 = [System.DirectoryServices.ActiveDirectoryAuditRule]::new($IdentityRef, [System.DirectoryServices.ActiveDirectoryRights]::Delete , [System.Security.AccessControl.AuditFlags]::Failure, ([System.Security.AccessControl.InheritanceFlags]::ContainerInherit,[System.Security.AccessControl.InheritanceFlags]::ObjectInherit) , [guid]"52ea1a9a-be7e-4213-9e69-5f28cb89b56a")
+                $collection.AddRule($auditRule)
+                $collection.AddRule($auditRule2)
+                $acl = @{Audit = $collection}
+                return $acl
+            }
         
-        [Parameter(Mandatory = $false)]
-        [ValidateSet("All","Children","Descendents","None","SelfAndChildren")]
-        [String]
-        $InheritanceType,
+            $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $false -AuditFlags Success -ActiveDirectoryRights GenericAll -InheritanceType All -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
 
-        [Parameter()]
-        [string]
-        $InheritedObjectType,
+            $ContextParams = @{
+                DistinguishedName = "DC=PowerStig,DC=Local"
+                AccessControlList = $TempAcl
+            }
 
-        [Parameter(Mandatory = $true)]
-        [ValidateSet("Absent", "Present")]
-        $Ensure
-    )
+            $GetResult = & "$($Global:DSCResourceName)\Get-TargetResource" @ContextParams
 
-    $NameSpace = "root/Microsoft/Windows/DesiredStateConfiguration"
-    $CimAccessControlList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
-    $CimAccessControlEntry = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
+            It 'Should return Ensure set as empty' {
+                [string]::IsNullOrWhiteSpace($GetResult.AccessControlList.AccessControlEntry.Ensure) | Should Be $true
+            }
 
-    if ($null -eq $ActiveDirectoryRights)
-    {
-        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectorySystemAccessControlList -Property @{
-                                Principal = $Principal
-                                ForcePrincipal = $ForcePrincipal
-                            }
-    }
-    else
-    {
-        $CimAccessControlEntry += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectoryAuditRule -Property @{
-                                AuditFlags = $AuditFlags
-                                ActiveDirectoryRights = @($ActiveDirectoryRights)
-                                InheritanceType = $InheritanceType
-                                InheritedObjectType = $InheritedObjectType
-                                Ensure = $Ensure
-                            }
-        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectorySystemAccessControlList -Property @{
-                            Principal = $Principal
-                            ForcePrincipal = $ForcePrincipal
-                            AccessControlEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($CimAccessControlEntry)
-                        }
-    }
-    Return $CimAccessControlList
-}
+            It "Should return $false from GetReturn.Force" {
+                $GetResult.Force | Should Be $false
+            }
 
-#endregion
+            It 'Should return DistinguishedName' {
+                $GetResult.DistinguishedName | Should Be "DC=PowerStig,DC=Local"
+            }
 
+            It 'Should return Principal' {
+                $GetResult.AccessControlList.Principal | Should Be "Everyone"
+            }
 
+            It 'Should return AccessControlEntries' {
+                $GetResult.AccessControlList.AccessControlEntry.Count | Should Be 2
+            }
 
-Describe "$Global:DSCResourceName\Get-TargetResource" {
+            It 'Should return InheritanceType' {
+                $GetResult.AccessControlList.AccessControlEntry[0].InheritanceType | Should Be "SelfAndChildren"
+            }
 
-    Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" }
-    Mock -CommandName Test-Path -MockWith { return $true }
-    Mock -CommandName Assert-Module -MockWith {}
-    Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'}
-
-    Context "Should return current Audit Rules" {
-        Mock -CommandName Get-Acl -MockWith {
-            $collection = [System.Security.AccessControl.AuthorizationRuleCollection]::new()
-            $Identity = Resolve-Identity -Identity "Everyone"
-            $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
-            $auditRule = [System.DirectoryServices.ActiveDirectoryAuditRule]::new($IdentityRef, [System.DirectoryServices.ActiveDirectoryRights]::Delete , [System.Security.AccessControl.AuditFlags]::Success, ([System.Security.AccessControl.InheritanceFlags]::ContainerInherit,[System.Security.AccessControl.InheritanceFlags]::ObjectInherit) , [guid]"52ea1a9a-be7e-4213-9e69-5f28cb89b56a")
-            $auditRule2 = [System.DirectoryServices.ActiveDirectoryAuditRule]::new($IdentityRef, [System.DirectoryServices.ActiveDirectoryRights]::Delete , [System.Security.AccessControl.AuditFlags]::Failure, ([System.Security.AccessControl.InheritanceFlags]::ContainerInherit,[System.Security.AccessControl.InheritanceFlags]::ObjectInherit) , [guid]"52ea1a9a-be7e-4213-9e69-5f28cb89b56a")
-            $collection.AddRule($auditRule)
-            $collection.AddRule($auditRule2)
-            $acl = @{Audit = $collection}
-            return $acl
+            It 'Should return AuditFlags' {
+                $GetResult.AccessControlList.AccessControlEntry[0].AuditFlags | Should Be "Success"
+            }
         }
-    
-        $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $false -AuditFlags Success -ActiveDirectoryRights GenericAll -InheritanceType All -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
-
-        $ContextParams = @{
-
-            DistinguishedName = "DC=PowerStig,DC=Local"
-
-            AccessControlList = $TempAcl
-
-        }
-
-        $GetResult = & "$($Global:DSCResourceName)\Get-TargetResource" @ContextParams
-
-        It 'Should return Ensure set as empty' {
-
-            [string]::IsNullOrWhiteSpace($GetResult.AccessControlList.AccessControlEntry.Ensure) | Should Be $true
-
-        }
-
-                    
-
-        It "Should return $false from GetReturn.Force" {
-
-            $GetResult.Force | Should Be $false
-
-        }
-
         
+        Context 'No permissions exist' {
 
-        It 'Should return DistinguishedName' {
-
-            $GetResult.DistinguishedName | Should Be "DC=PowerStig,DC=Local"
-
-        }
-
+            Mock -CommandName Get-Acl -MockWith {
+                $collection = [System.Security.AccessControl.AuthorizationRuleCollection]::new()
+                $acl = @{Audit = $collection}
+                return $acl
+            }
         
+            $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $false -AuditFlags Success -ActiveDirectoryRights GenericAll -InheritanceType All -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
+            
+            $ContextParams = @{
+                DistinguishedName = "DC=PowerStig,DC=Local"
+                AccessControlList = $TempAcl
+            }
 
-        It 'Should return Principal' {
+            $GetResult = Get-TargetResource @ContextParams
 
-            $GetResult.AccessControlList.Principal | Should Be "Everyone"
+            It 'Should return Ensure set as empty' {
+                [string]::IsNullOrEmpty($GetResult.AccessControl.AccessControlEntry.Ensure) | Should Be $true
+            }
 
+            It 'Should return DistinguishedName' {
+                $GetResult.DistinguishedName | Should Be $ContextParams.DistinguishedName
+            }
+
+            It 'Should return Principal' {
+                $GetResult.AccessControlList.Principal | Should Be "Everyone"
+            }
+
+            It 'Should return empty AccessControlInformation' {
+                $GetResult.AccessControlList.AccessControlEntry.Count | Should Be 0
+            }
         }
-
-        
-
-        It 'Should return AccessControlEntries' {
-
-            $GetResult.AccessControlList.AccessControlEntry.Count | Should Be 2
-
-        }
-
-        
-
-        It 'Should return InheritanceType' {
-
-            $GetResult.AccessControlList.AccessControlEntry[0].InheritanceType | Should Be "SelfAndChildren"
-
-        }
-
-        
-
-        It 'Should return AuditFlags' {
-
-            $GetResult.AccessControlList.AccessControlEntry[0].AuditFlags | Should Be "Success"
-
-        }
-
     }
 
-
-    
-    Context 'No permissions exist' {
-        Mock -CommandName Get-Acl -MockWith {
-            $collection = [System.Security.AccessControl.AuthorizationRuleCollection]::new()
-            $acl = @{Audit = $collection}
-            return $acl
-        }
-    
-        $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $false -AuditFlags Success -ActiveDirectoryRights GenericAll -InheritanceType All -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
+    Describe "$Global:DSCResourceName\Test-TargetResource" {
         
-        $ContextParams = @{
-
-            DistinguishedName = "DC=PowerStig,DC=Local"
-
-            AccessControlList = $TempAcl
-
-        }
-
-        $GetResult = Get-TargetResource @ContextParams
-
-
-
-        It 'Should return Ensure set as empty' {
-
-            [string]::IsNullOrEmpty($GetResult.AccessControl.AccessControlEntry.Ensure) | Should Be $true
-
-        }
-
-
-
-        It 'Should return DistinguishedName' {
-
-            $GetResult.DistinguishedName | Should Be $ContextParams.DistinguishedName
-
-        }
-
-
-
-        It 'Should return Principal' {
-
-            $GetResult.AccessControlList.Principal | Should Be "Everyone"
-
-        }
-
-
-
-        It 'Should return empty AccessControlInformation' {
-
-            $GetResult.AccessControlList.AccessControlEntry.Count | Should Be 0
-
-        }
-
-    }
-
-}
-
-Describe "$Global:DSCResourceName\Test-TargetResource" {
-    
         Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" }
         Mock -CommandName Test-Path -MockWith { return $true }
         Mock -CommandName Assert-Module -MockWith {}
@@ -276,28 +130,21 @@ Describe "$Global:DSCResourceName\Test-TargetResource" {
             $acl = @{Audit = $collection}
             return $acl
         }
-
     
         Context "Permissions already exist with ForcePrincipal False" {
         
             $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $false -AuditFlags Success -ActiveDirectoryRights Delete -InheritanceType SelfAndChildren -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
     
             $ContextParams = @{
-    
                 DistinguishedName = "DC=PowerStig,DC=Local"
-    
                 AccessControlList = $TempAcl
-    
             }
     
             $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return true' {
-    
-                $TestResult | Should Be $true
-    
+                $TestResult | Should Be $true        
             }
-        
         }  
         
         Context "Permissions dont exist with ForcePrincipal False" {
@@ -305,43 +152,31 @@ Describe "$Global:DSCResourceName\Test-TargetResource" {
             $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $false -AuditFlags Success -ActiveDirectoryRights CreateChild -InheritanceType SelfAndChildren -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
 
             $ContextParams = @{
-
                 DistinguishedName = "DC=PowerStig,DC=Local"
-
                 AccessControlList = $TempAcl
-
             }
 
             $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
 
             It 'Should return false' {
-
                 $TestResult | Should Be $false
-
             }
-        
         }
 
         Context "Permissions dont exist with ForcePrincipal true" {
             
             $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $true -AuditFlags Success -ActiveDirectoryRights CreateChild -InheritanceType SelfAndChildren -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
     
-            $ContextParams = @{
-    
+            $ContextParams = @{        
                 DistinguishedName = "DC=PowerStig,DC=Local"
-    
-                AccessControlList = $TempAcl
-    
+                AccessControlList = $TempAcl        
             }
     
             $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return false' {
-    
                 $TestResult | Should Be $false
-    
             }
-        
         }
 
         Context "Permissions dont exist with ForcePrincipal false" {
@@ -349,19 +184,14 @@ Describe "$Global:DSCResourceName\Test-TargetResource" {
             $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $false -AuditFlags Success -ActiveDirectoryRights CreateChild -InheritanceType SelfAndChildren -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
     
             $ContextParams = @{
-    
                 DistinguishedName = "DC=PowerStig,DC=Local"
-    
                 AccessControlList = $TempAcl
-    
             }
     
             $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return false' {
-    
                 $TestResult | Should Be $false
-    
             }
         
         }
@@ -371,21 +201,15 @@ Describe "$Global:DSCResourceName\Test-TargetResource" {
             $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $true -AuditFlags Success -ActiveDirectoryRights Delete -InheritanceType SelfAndChildren -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
     
             $ContextParams = @{
-    
                 DistinguishedName = "DC=PowerStig,DC=Local"
-    
                 AccessControlList = $TempAcl
-    
             }
     
             $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
     
-            It 'Should return false' {
-    
+            It 'Should return false' {        
                 $TestResult | Should Be $false
-    
             }
-        
         }
 
         Context "Multiple user principals exist with Force true" {
@@ -393,23 +217,17 @@ Describe "$Global:DSCResourceName\Test-TargetResource" {
             $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $false -AuditFlags Success -ActiveDirectoryRights Delete -InheritanceType SelfAndChildren -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
     
             $ContextParams = @{
-    
                 DistinguishedName = "DC=PowerStig,DC=Local"
                 Force = $true
-                AccessControlList = $TempAcl
-    
+                AccessControlList = $TempAcl        
             }
     
             $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return false' {
-    
                 $TestResult | Should Be $false
-    
             }
-        
         }
-
         
         Context "Only requested permissions exist with Force true" {
             
@@ -426,26 +244,21 @@ Describe "$Global:DSCResourceName\Test-TargetResource" {
             $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $false -AuditFlags Success -ActiveDirectoryRights Delete -InheritanceType SelfAndChildren -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
     
             $ContextParams = @{
-    
                 DistinguishedName = "DC=PowerStig,DC=Local"
                 Force = $true
                 AccessControlList = $TempAcl
-    
             }
     
             $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return true' {
-    
                 $TestResult | Should Be $true
-    
             }
-        
         }
-    
     }
 
     Describe "Helper Functions" {
+
         Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" }
         Mock -CommandName Test-Path -MockWith { return $true }
         Mock -CommandName Assert-Module -MockWith {}
@@ -459,18 +272,15 @@ Describe "$Global:DSCResourceName\Test-TargetResource" {
         $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $false -AuditFlags Success -ActiveDirectoryRights Delete -InheritanceType SelfAndChildren -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
 
         Context "ConvertTo-ActiveDirectoryAuditRule" {
+            
             $ConvertedAuditRule = ConvertTo-ActiveDirectoryAuditRule -AccessControlList $TempAcl -IdentityRef $IdentityRef
 
             It 'Should return 1 rule' {
-    
                 $ConvertedAuditRule.Rules.Count | Should Be 1
-    
             }
 
-            It 'Should return a pscustomobject' {
-                
+            It 'Should return a pscustomobject' {                
                 $ConvertedAuditRule.GetType().Name | Should Be "PSCustomObject"
-    
             }
 
             foreach($property in ($auditRule | Get-Member -MemberType Properties))
@@ -482,13 +292,12 @@ Describe "$Global:DSCResourceName\Test-TargetResource" {
         }
 
         Context "Compare-ActiveDirectoryAuditRule with matching rules only" {
+            
             $ConvertedAuditRule = ConvertTo-ActiveDirectoryAuditRule -AccessControlList $TempAcl -IdentityRef $IdentityRef
             $compare = Compare-ActiveDirectoryAuditRule -Actual $auditRule -Expected $ConvertedAuditRule
 
             It 'Should return a pscustomobject' {
-                
                 $ConvertedAuditRule.GetType().Name | Should Be "PSCustomObject"
-    
             }
 
             It "Should not have any ToBeRemoved Rules" {
@@ -526,9 +335,7 @@ Describe "$Global:DSCResourceName\Test-TargetResource" {
             $compare = Compare-ActiveDirectoryAuditRule -Actual $acl.Audit -Expected $ConvertedAuditRule
 
             It 'Should return a pscustomobject' {
-                
                 $ConvertedAuditRule.GetType().Name | Should Be "PSCustomObject"
-    
             }
 
             It "Should not have any ToBeRemoved Rules" {
@@ -564,9 +371,7 @@ Describe "$Global:DSCResourceName\Test-TargetResource" {
             $compare = Compare-ActiveDirectoryAuditRule -Actual $acl.Audit -Expected $ConvertedAuditRule
 
             It 'Should return a pscustomobject' {
-                
                 $ConvertedAuditRule.GetType().Name | Should Be "PSCustomObject"
-    
             }
 
             It "Should not have any ToBeRemoved Rules" {
@@ -585,6 +390,5 @@ Describe "$Global:DSCResourceName\Test-TargetResource" {
                 $compare.Rules.Match | Should Be "False"
             }
         }
-    }
-    
+    }        
 }
