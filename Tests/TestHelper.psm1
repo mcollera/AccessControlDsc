@@ -409,16 +409,14 @@ function New-AuditAccessControlList
 
     if ($null -eq $ActiveDirectoryRights)
     {
-        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectorySystemAccessControlList 
-                -Property @{
+        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectorySystemAccessControlList -Property @{
                                 Principal = $Principal
                                 ForcePrincipal = $ForcePrincipal
                             }
     }
     else
     {
-        $CimAccessControlEntry += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectoryAuditRule
-                 -Property @{
+        $CimAccessControlEntry += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectoryAuditRule -Property @{
                                 AuditFlags = $AuditFlags
                                 ActiveDirectoryRights = @($ActiveDirectoryRights)
                                 InheritanceType = $InheritanceType
@@ -426,8 +424,7 @@ function New-AuditAccessControlList
                                 Ensure = $Ensure
                             }
 
-        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectorySystemAccessControlList 
-                -Property @{
+        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectorySystemAccessControlList -Property @{
                             Principal = $Principal
                             ForcePrincipal = $ForcePrincipal
                             AccessControlEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($CimAccessControlEntry)
