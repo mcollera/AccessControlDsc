@@ -174,14 +174,6 @@ Function Set-TargetResource
         Set-Acl -Path $Path -AclObject $currentAcl
     }
 
-    foreach($Rule in $Expected)
-    {
-        if($Rule.Match -eq $false)
-        {
-            $currentAcl.AddAccessRule($Rule.Rule)
-        }
-    }
-
     foreach($Rule in $AbsentToBeRemoved.Rule)
     {
         $currentAcl.RemoveAccessRule($Rule)
@@ -209,6 +201,14 @@ Function Set-TargetResource
                 $message = $LocalizedData.AclNotFound -f $($Rule.IdentityReference.Value) 
                 Write-Verbose -Message $message 
             }
+        }
+    }
+
+    foreach($Rule in $Expected)
+    {
+        if($Rule.Match -eq $false)
+        {
+            $currentAcl.AddAccessRule($Rule.Rule)
         }
     }
 
@@ -487,5 +487,5 @@ Function Get-RegistryRuleInheritenceName
         }
     }
 
-    return ""
+    return "none"
 }

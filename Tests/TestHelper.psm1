@@ -187,27 +187,187 @@ function New-AccessControlList
     Return $CimAccessControlList
 }
 
-function New-AuditAccessControlList
+function New-RegistryAccessControlList
 {
 <#
     .SYNOPSIS
-    Creates an Access Control List Ciminstance
+        Creates an Access Control List Ciminstance for registry rules
     
     .PARAMETER Principal
-    Name of the principal which access rights are being managed 
+        Name of the principal which access rights are being managed 
     
     .PARAMETER ForcePrincipal
         Used to force the desired access rule
     
     .PARAMETER AccessControlType
-    States if the principal should be will be allowed or denied access
+        States if the principal should be will be allowed or denied access
     
-    .PARAMETER FileSystemRights
-    What rights the principal is being given over an object
+    .PARAMETER RegistryRights
+        Rights to be given to a principal over an object
     
     .PARAMETER Inheritance
-    The inheritance properties of the object being managed
+        The inheritance properties of the object being managed
     
+    .PARAMETER Ensure
+        Either Present or Absent
+#>
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        $Principal,
+
+        [Parameter(Mandatory = $true)]
+        [boolean]
+        $ForcePrincipal,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("Allow","Deny")]
+        [string]
+        $AccessControlType,
+
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("ChangePermissions", "CreateLink", "CreateSubkey", "Delete", "EnumerateSubKeys", "ExecuteKey", "FullControl", "Notify", "QueryValues", "ReadKey", "ReadPermissions", "SetValue", "TakeOwnership", "WriteKey")]
+        $RegistryRights,
+        
+        [Parameter(Mandatory = $false)]
+        [ValidateSet("Key", "KeySubkeys", "Subkeys")]
+        [String]
+        $Inheritance,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("Absent", "Present")]
+        $Ensure
+    )
+
+    $NameSpace = "root/Microsoft/Windows/DesiredStateConfiguration"
+    $CimAccessControlList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
+    $CimAccessControlEntry = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
+
+    if ($null -eq $RegistryRights)
+    {
+        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName NTFSAccessControlList -Property @{
+                            Principal = $Principal
+                            ForcePrincipal = $ForcePrincipal
+                        }
+    }
+    else
+    {
+        $CimAccessControlEntry += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName AccessControlEntry -Property @{
+                            AccessControlType = $AccessControlType
+                            Rights = @($RegistryRights)
+                            Inheritance = $Inheritance
+                            Ensure = $Ensure
+                        }
+        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName NTFSAccessControlList -Property @{
+                            Principal = $Principal
+                            ForcePrincipal = $ForcePrincipal
+                            AccessControlEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($CimAccessControlEntry)
+                        }
+    }
+    Return $CimAccessControlList
+}
+
+function Set-NewTempRegKeyAcl
+{
+    <#
+    .SYNOPSIS
+        Creates a new temporary RegistryKey and sets its Access Control List (ACL).
+
+    .PARAMETER Path
+        Path where the Item will be created
+
+    .PARAMETER AccessRuleToAdd
+        Access Rules you wish to add to a specific principal. Can be left blank and no rules will be created except a default full control for the current user
+
+    .PARAMETER PassThru
+        Switch to pass the entire object thru if you wish to use it
+
+    .DESCRIPTION
+        The Set-NewTempRegKeyAcl function creates a new temporary Registry Key and sets its Access Control List (ACL):
+        - Disables NTFS permissions inheritance.
+        - Removes all permission entries.
+        - Grants Full Control permission to the calling user to ensure the file can be removed later.
+        - Optionally adds additional permission entries.
+    #>
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $false)]
+        [ValidateNotNullOrEmpty()]
+        [String]
+        $Path,
+
+        [Parameter(Mandatory = $false)]
+        [System.Security.AccessControl.RegistryAccessRule[]]
+        $AccessRulesToAdd,
+
+        [Parameter(Mandatory = $false)]
+        [Switch]
+        $PassThru
+    )
+
+    try
+    {
+        $TempItem = New-Item -Path $Path -Force -ErrorAction Stop -Verbose:$VerbosePreference
+        $Acl = $TempItem.GetAccessControl()
+
+        $Acl.SetAccessRuleProtection($true, $false)
+        $Acl.Access.ForEach({[Void]$Acl.RemoveAccessRule($_)})
+
+        $CurrentUser = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+
+
+        $DefaultAccessRule = New-Object System.Security.AccessControl.RegistryAccessRule  `
+            -ArgumentList @(
+                $CurrentUser,
+                'FullControl',
+                @('ContainerInherit',
+                'ObjectInherit'),
+                'None',
+                'Allow'
+            )
+
+        $Acl.AddAccessRule($DefaultAccessRule)
+
+        if ($PSBoundParameters.ContainsKey('AccessRulesToAdd'))
+        {
+            $AccessRulesToAdd.ForEach({$Acl.AddAccessRule($_)})
+        }
+
+        $tempItem.SetAccessControl($Acl)
+
+        if ($PassThru)
+        {
+            return $TempItem
+        }
+    }
+    catch
+    {
+        throw
+    }
+}
+
+function New-AuditAccessControlList
+{
+<#
+    .SYNOPSIS
+    Creates an Access Control List Ciminstance
+
+    .PARAMETER Principal
+    Name of the principal which access rights are being managed 
+
+    .PARAMETER ForcePrincipal
+        Used to force the desired access rule
+
+    .PARAMETER AccessControlType
+    States if the principal should be will be allowed or denied access
+
+    .PARAMETER FileSystemRights
+    What rights the principal is being given over an object
+
+    .PARAMETER Inheritance
+    The inheritance properties of the object being managed
+
     .PARAMETER Ensure
     Either Present or Absent
 #>
@@ -228,7 +388,7 @@ function New-AuditAccessControlList
         [Parameter(Mandatory = $false)]
         [ValidateSet("AccessSystemSecurity","CreateChild","Delete","DeleteChild","DeleteTree","ExtendedRight","GenericAll","GenericExecute","GenericRead","GenericWrite","ListChildren","ListObject","ReadControl","ReadProperty","Self","WriteDacl","WriteOwner","WriteProperty")]
         $ActiveDirectoryRights,
-        
+
         [Parameter(Mandatory = $false)]
         [ValidateSet("All","Children","Descendents","None","SelfAndChildren")]
         [String]
@@ -249,21 +409,25 @@ function New-AuditAccessControlList
 
     if ($null -eq $ActiveDirectoryRights)
     {
-        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectorySystemAccessControlList -Property @{
+        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectorySystemAccessControlList 
+                -Property @{
                                 Principal = $Principal
                                 ForcePrincipal = $ForcePrincipal
                             }
     }
     else
     {
-        $CimAccessControlEntry += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectoryAuditRule -Property @{
+        $CimAccessControlEntry += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectoryAuditRule
+                 -Property @{
                                 AuditFlags = $AuditFlags
                                 ActiveDirectoryRights = @($ActiveDirectoryRights)
                                 InheritanceType = $InheritanceType
                                 InheritedObjectType = $InheritedObjectType
                                 Ensure = $Ensure
                             }
-        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectorySystemAccessControlList -Property @{
+
+        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectorySystemAccessControlList 
+                -Property @{
                             Principal = $Principal
                             ForcePrincipal = $ForcePrincipal
                             AccessControlEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($CimAccessControlEntry)
