@@ -24,7 +24,8 @@ function Resolve-Identity
 
         $tryNTService = $false
 
-        try {  
+        try 
+        {  
             if ($Identity -match '^S-\d-(\d+-){1,14}\d+$')
             {
                 [System.Security.Principal.SecurityIdentifier]$Identity = $Identity

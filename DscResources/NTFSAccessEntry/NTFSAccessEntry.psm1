@@ -130,7 +130,7 @@ Function Set-TargetResource
                 {
                     $Principal = $AccessControlItem.Principal
                     $Identity = Resolve-Identity -Identity $Principal
-                    $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
+                    $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
                     $ACLRules += ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
                 }    
@@ -149,7 +149,7 @@ Function Set-TargetResource
                 {
                     $Principal = $AccessControlItem.Principal
                     $Identity = Resolve-Identity -Identity $Principal
-                    $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
+                    $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
                     $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
@@ -198,7 +198,7 @@ Function Set-TargetResource
                     {
                         #If failure due to Idenitity translation issue then create the same rule with the identity as a sid to remove account
                         $SID = ConvertTo-SID -IdentityReference $Rule.IdentityReference.Value
-                        $SIDRule = [System.Security.AccessControl.FileSystemRights]::new($SID, $Rule.FileSystemRights.value__, $Rule.InheritanceFlags.value__, $Rule.PropagationFlags.value__, $Rule.AccessControlType.value__)
+                        $SIDRule = New-Object System.Security.AccessControl.FileSystemRights($SID, $Rule.FileSystemRights.value__, $Rule.InheritanceFlags.value__, $Rule.PropagationFlags.value__, $Rule.AccessControlType.value__)
                         $currentAcl.RemoveAccessRule($SIDRule)
                     }
                     catch
@@ -290,7 +290,7 @@ Function Test-TargetResource
                 {
                     $Principal = $AccessControlItem.Principal
                     $Identity = Resolve-Identity -Identity $Principal
-                    $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
+                    $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
                     $ACLRules += ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
                 }    
@@ -309,7 +309,7 @@ Function Test-TargetResource
                 {
                     $Principal = $AccessControlItem.Principal
                     $Identity = Resolve-Identity -Identity $Principal
-                    $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
+                    $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
                     $ACLRules = ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
 
@@ -522,7 +522,7 @@ Function ConvertTo-FileSystemAccessRule
         $Inheritance = Get-NtfsInheritenceFlags -Inheritance $ace.Inheritance
 
         $rule = [PSCustomObject]@{
-            Rules = [System.Security.AccessControl.FileSystemAccessRule]::new($IdentityRef, $ace.FileSystemRights, $Inheritance.InheritanceFlag, $Inheritance.PropagationFlag, $ace.AccessControlType)
+            Rules = New-Object System.Security.AccessControl.FileSystemAccessRule($IdentityRef, $ace.FileSystemRights, $Inheritance.InheritanceFlag, $Inheritance.PropagationFlag, $ace.AccessControlType)
             Ensure = $ace.Ensure
         }
         $refrenceObject += $rule
@@ -636,7 +636,7 @@ Function Update-FileSystemRightsMapping
         {
             $SID = ConvertTo-SID -IdentityReference $Rule.IdentityReference
             $mappedRight = Get-MappedGenericRights($Rule.FileSystemRights)
-            $mappedRule = [System.Security.AccessControl.FileSystemAccessRule]::new($SID, $mappedRight, $Rule.InheritanceFlags, $Rule.PropagationFlags, $Rule.AccessControlType)
+            $mappedRule = New-Object System.Security.AccessControl.FileSystemAccessRule($SID, $mappedRight, $Rule.InheritanceFlags, $Rule.PropagationFlags, $Rule.AccessControlType)
 
             try
             {
