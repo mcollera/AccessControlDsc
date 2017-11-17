@@ -35,14 +35,15 @@ Function Get-TargetResource
 
     $NameSpace = "root/Microsoft/Windows/DesiredStateConfiguration"
     $CimAccessControlList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
+    $inputPath = Get-InputPath($Path)
 
-    if(Test-Path -Path $Path)
+    if(Test-Path -Path $inputPath)
     {
-        $currentACL = Get-Acl -Path $Path -ErrorAction Stop
+        $currentACL = Get-Acl -Path $inputPath -ErrorAction Stop
 
         if($null -ne $currentACL)
         {
-            $message = $LocalizedData.AclFound -f $Path
+            $message = $LocalizedData.AclFound -f $inputPath
             Write-Verbose -Message $message
             
             foreach($Principal in $AccessControlList)
@@ -79,19 +80,19 @@ Function Get-TargetResource
         }
         else
         {
-            $message = $LocalizedData.AclNotFound -f $Path
+            $message = $LocalizedData.AclNotFound -f $inputPath
             Write-Verbose -Message $message
         }
     }
     else
     {
-        $Message = $LocalizedData.ErrorPathNotFound -f $Path
+        $Message = $LocalizedData.ErrorPathNotFound -f $inputPath
         Write-Verbose -Message $Message
     }
 
     $ReturnValue = @{
         Force = $Force
-        Path = $Path
+        Path = $inputPath
         AccessControlList = $CimAccessControlList
     }
 
@@ -116,9 +117,11 @@ Function Set-TargetResource
         $Force = $false
     )
 
-    if(Test-Path -Path $Path)
+    $inputPath = Get-InputPath($Path)
+
+    if(Test-Path -Path $inputPath)
     {
-        $currentAcl = Get-Acl -Path $Path
+        $currentAcl = Get-Acl -Path $inputPath
         if($null -ne $currentAcl)
         {
             if($Force)
@@ -156,7 +159,7 @@ Function Set-TargetResource
                     $Expected += $Results.Rules
                     $AbsentToBeRemoved += $Results.Absent
 
-                    if($AccessControlItem.ForcePrinciPal)
+                    if($AccessControlItem.ForcePrincipal)
                     {
                         $ToBeRemoved += $Results.ToBeRemoved
                     }
@@ -170,7 +173,7 @@ Function Set-TargetResource
             if($isInherited -gt 0)
             {
                 $currentAcl.SetAccessRuleProtection($true,$true)
-                Set-Acl -Path $Path -AclObject $currentAcl
+                Set-Acl -Path $inputPath -AclObject $currentAcl             
             }
             
 
@@ -179,8 +182,8 @@ Function Set-TargetResource
                 try
                 {
                     ("Removing access rule:"),
-                    ("> Principal         : '{0}'" -f $Principal),
-                    ("> Path              : '{0}'" -f $Path),
+                    ("> Principal         : '{0}'" -f $Rule.IdentityReference),
+                    ("> Path              : '{0}'" -f $inputPath),
                     ("> IdentityReference : '{0}'" -f $Rule.IdentityReference),
                     ("> AccessControlType : '{0}'" -f $Rule.AccessControlType),
                     ("> FileSystemRights  : '{0}'" -f $Rule.FileSystemRights),
@@ -209,8 +212,8 @@ Function Set-TargetResource
             foreach($Rule in $AbsentToBeRemoved.Rule)
             {
                 ("Removing access rule:"),
-                ("> Principal         : '{0}'" -f $Principal),
-                ("> Path              : '{0}'" -f $Path),
+                ("> Principal         : '{0}'" -f $Rule.IdentityReference),
+                ("> Path              : '{0}'" -f $inputPath),
                 ("> IdentityReference : '{0}'" -f $Rule.IdentityReference),
                 ("> AccessControlType : '{0}'" -f $Rule.AccessControlType),
                 ("> FileSystemRights  : '{0}'" -f $Rule.FileSystemRights),
@@ -225,8 +228,8 @@ Function Set-TargetResource
             {
                     $NonMatch = $Rule.Rule
                     ("Adding access rule:"),
-                    ("> Principal         : '{0}'" -f $Principal),
-                    ("> Path              : '{0}'" -f $Path),
+                    ("> Principal         : '{0}'" -f $NonMatch.IdentityReference),
+                    ("> Path              : '{0}'" -f $inputPath),
                     ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
                     ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
                     ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
@@ -236,18 +239,18 @@ Function Set-TargetResource
 
                     $currentAcl.AddAccessRule($Rule.Rule)
             }
-
-            Set-Acl -Path $Path -AclObject $currentAcl
+            
+            Set-Acl -Path $inputPath -AclObject $currentAcl
         }
         else
         {
-            $message = $LocalizedData.AclNotFound -f $Path
+            $message = $LocalizedData.AclNotFound -f $inputPath
             Write-Verbose -Message $message
         }
     }
     else
     {
-        $Message = $LocalizedData.ErrorPathNotFound -f $Path
+        $Message = $LocalizedData.ErrorPathNotFound -f $inputPath
         Write-Verbose -Message $Message
     }
 }
@@ -272,10 +275,12 @@ Function Test-TargetResource
     )
 
     $InDesiredState = $True
+    $inputPath = Get-InputPath($Path)
   
-    if(Test-Path -Path $Path)
+    if(Test-Path -Path $inputPath)
     {
-        $currentACL = Get-Acl -Path $Path
+        $currentACL = Get-Acl -Path $inputPath
+        $mappedACL = Update-FileSystemRightsMapping($currentAcl)
 
         if($null -ne $currentACL)
         {
@@ -290,7 +295,7 @@ Function Test-TargetResource
                     $ACLRules += ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
                 }    
         
-                $actualAce = $currentAcl.Access
+                $actualAce = $mappedACL.Access
 
                 $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce -Force $AccessControlItem.ForcePrincipal
 
@@ -308,14 +313,14 @@ Function Test-TargetResource
 
                     $ACLRules = ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
 
-                    $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
+                    $actualAce = $mappedACL.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
                     $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce -Force $AccessControlItem.ForcePrincipal
 
                     $Expected += $Results.Rules
                     $AbsentToBeRemoved += $Results.Absent
 
-                    if($AccessControlItem.ForcePrinciPal)
+                    if($AccessControlItem.ForcePrincipal)
                     {
                         $ToBeRemoved += $Results.ToBeRemoved
                     }
@@ -329,8 +334,8 @@ Function Test-TargetResource
                 {
                     $NonMatch = $Rule.Rule
                     ("Found missing [present] permission rule:"),
-                    ("> Principal         : '{0}'" -f $Principal),
-                    ("> Path              : '{0}'" -f $Path),
+                    ("> Principal         : '{0}'" -f $NonMatch.IdentityReference),
+                    ("> Path              : '{0}'" -f $inputPath),
                     ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
                     ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
                     ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
@@ -347,8 +352,8 @@ Function Test-TargetResource
                 foreach ($rule in $AbsentToBeRemoved)
                 {
                     ("Found [absent] permission rule:"),
-                    ("> Principal         : '{0}'" -f $Principal),
-                    ("> Path              : '{0}'" -f $Path),
+                    ("> Principal         : '{0}'" -f $Rule.IdentityReference),
+                    ("> Path              : '{0}'" -f $inputPath),
                     ("> IdentityReference : '{0}'" -f $Rule.IdentityReference),
                     ("> AccessControlType : '{0}'" -f $Rule.AccessControlType),
                     ("> FileSystemRights  : '{0}'" -f $Rule.FileSystemRights),
@@ -365,8 +370,8 @@ Function Test-TargetResource
                 foreach ($Rule in $ToBeRemoved)
                 {
                     ("Non-matching permission entry found:"),
-                    ("> Principal         : '{0}'" -f $Principal),
-                    ("> Path              : '{0}'" -f $Path),
+                    ("> Principal         : '{0}'" -f $Rule.IdentityReference),
+                    ("> Path              : '{0}'" -f $inputPath),
                     ("> IdentityReference : '{0}'" -f $Rule.IdentityReference),
                     ("> AccessControlType : '{0}'" -f $Rule.AccessControlType),
                     ("> FileSystemRights  : '{0}'" -f $Rule.FileSystemRights),
@@ -380,14 +385,14 @@ Function Test-TargetResource
         }
         else
         {
-            $message = $LocalizedData.AclNotFound -f $Path
+            $message = $LocalizedData.AclNotFound -f $inputPath
             Write-Verbose -Message $message
             $InDesiredState = $False
         }
     }
     else
     {
-        $Message = $LocalizedData.ErrorPathNotFound -f $Path
+        $Message = $LocalizedData.ErrorPathNotFound -f $inputPath
         Write-Verbose -Message $Message
         $InDesiredState = $False
     }
@@ -613,4 +618,104 @@ Function Compare-NtfsRules
         ToBeRemoved = $ToBeRemoved
         Absent = $AbsentToBeRemoved
     }
+}
+
+Function Update-FileSystemRightsMapping
+{
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [System.Object]
+        $ACE
+    )
+
+    foreach($Rule in $ACE.Access)
+    {
+        $rightsBand = [int]0xf0000000 -band $Rule.FileSystemRights.value__
+        if( ($rightsBand -gt 0) -or ($rightsBand -lt 0) )
+        {
+            $SID = ConvertTo-SID -IdentityReference $Rule.IdentityReference
+            $mappedRight = Get-MappedGenericRights($Rule.FileSystemRights)
+            $mappedRule = [System.Security.AccessControl.FileSystemAccessRule]::new($SID, $mappedRight, $Rule.InheritanceFlags, $Rule.PropagationFlags, $Rule.AccessControlType)
+
+            try
+            {
+                $ACE.RemoveAccessRule($Rule)
+            }
+            catch
+            {                
+                $sidRule = $ACE.AccessRuleFactory($SID, $Rule.FileSystemRights, $Rule.IsInherited , $Rule.InheritanceFlags, $Rule.PropagationFlags, $Rule.AccessControlType)
+                $ACE.RemoveAccessRule($sidRule)
+            }
+            
+            $ACE.AddAccessRule($mappedRule)
+        }
+    }
+
+    return $ACE
+}
+
+Function Get-MappedGenericRights
+{
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [int]
+        $Rights
+    )
+
+    [int]$GenericRead = 0x80000000
+    [int]$GenericWrite = 0x40000000
+    [int]$GenericExecute = 0x20000000
+    [int]$GenericFullControl = 0x10000000
+
+    [int]$FsarGenericRead = ([System.Security.AccessControl.FileSystemRights]::ReadAttributes -bor [System.Security.AccessControl.FileSystemRights]::ReadData -bor [System.Security.AccessControl.FileSystemRights]::ReadExtendedAttributes -bor [System.Security.AccessControl.FileSystemRights]::ReadPermissions -bor [System.Security.AccessControl.FileSystemRights]::Synchronize)
+    [int]$FsarGenericWrite = ([System.Security.AccessControl.FileSystemRights]::AppendData -bor [System.Security.AccessControl.FileSystemRights]::WriteAttributes -bor [System.Security.AccessControl.FileSystemRights]::WriteData -bor [System.Security.AccessControl.FileSystemRights]::WriteExtendedAttributes -bor [System.Security.AccessControl.FileSystemRights]::ReadPermissions -bor [System.Security.AccessControl.FileSystemRights]::Synchronize)
+    [int]$FsarGenericExecute = ([System.Security.AccessControl.FileSystemRights]::ExecuteFile -bor [System.Security.AccessControl.FileSystemRights]::ReadPermissions -bor [System.Security.AccessControl.FileSystemRights]::ReadAttributes -bor [System.Security.AccessControl.FileSystemRights]::Synchronize)
+    [int]$FsarGenericFullControl = [System.Security.AccessControl.FileSystemRights]::FullControl
+
+    $FsarRights = 0
+
+    if (($Rights -band $GenericRead) -eq $GenericRead)
+    {
+        $FsarRights = $FsarRights -bor $FsarGenericRead
+    }
+    if (($Rights -band $GenericWrite) -eq $GenericWrite)
+    {
+        $FsarRights = $FsarRights -bor  $FsarGenericWrite
+    }
+    if (($Rights -band $GenericExecute) -eq $GenericExecute)
+    {
+        $FsarRights = $FsarRights -bor  $FsarGenericExecute
+    }
+    if (($Rights -band $GenericFullControl) -eq $GenericFullControl)
+    {
+        $FsarRights = $FsarRights -bor  $FsarGenericFullControl
+    }
+
+
+    if ($FsarRights -ne 0)
+    {
+        return $FsarRights
+    }
+
+    return $Rights
+}
+
+Function Get-InputPath
+{
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [string]
+        $Path
+    )
+
+    $returnPath = $Path
+
+    # If Path has a environment variable, convert it to a locally usable path
+    $returnPath = [System.Environment]::ExpandEnvironmentVariables($Path)
+    
+    return $returnPath
+    
 }
