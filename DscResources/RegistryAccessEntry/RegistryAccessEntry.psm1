@@ -235,8 +235,8 @@ Function Test-TargetResource
 
     if(-not (Test-Path -Path $Path))
     {
-        $errorMessage = $LocalizedData.ErrorPathNotFound -f $Path
-        throw $errorMessage
+        $LocalizedData.ErrorPathNotFound -f $Path | Write-Verbose
+        return $true
     }
 
     $currentAcl = Get-Acl -Path $Path
