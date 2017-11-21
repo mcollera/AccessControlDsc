@@ -437,7 +437,7 @@ Function Compare-ActiveDirectoryAuditRule
     $PresentRules = $Expected.Where({$_.Ensure -eq 'Present'}).Rules
     $AbsentRules = $Expected.Where({$_.Ensure -eq 'Absent'}).Rules
     foreach($refrenceObject in $PresentRules)
-    { 
+    {
         $match = $Actual.Where({
             $_.ActiveDirectoryRights -eq $refrenceObject.ActiveDirectoryRights -and
             $_.AuditFlags -eq $refrenceObject.AuditFlags -and
@@ -529,7 +529,7 @@ Function Get-SchemaIdGuid
     )
 
     if($ObjectName)
-    {  
+    {
         $value = Get-ADObject -filter {name -eq $ObjectName} -SearchBase (Get-ADRootDSE).schemaNamingContext -prop schemaIDGUID
         return [guid]$value.schemaIDGUID 
     }

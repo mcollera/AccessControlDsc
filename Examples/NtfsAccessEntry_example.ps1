@@ -1,7 +1,7 @@
 ﻿configuration Sample_NTFSAccessControl
 {
     Import-DscResource -ModuleName AccessControlDsc
-    node $TargetName
+    node localhost
     {
         NTFSAccessEntry Test
         {

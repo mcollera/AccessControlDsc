@@ -1,150 +1,123 @@
-master: [![Build status](https://ci.appveyor.com/api/projects/status/fg26tpfjv7odbgbu/branch/master?svg=true)](https://ci.appveyor.com/project/PowerShell/AccessControlDsc/branch/master)  
-dev: [![Build status](https://ci.appveyor.com/api/projects/status/fg26tpfjv7odbgbu/branch/Dev?svg=true)](https://ci.appveyor.com/project/PowerShell/AccessControlDsc/branch/dev)
-
 # AccessControlDsc
 
-The **AccessControlDsc** module allows you to configure and manage access control on windows based objects.
+master: [![Build status](https://ci.appveyor.com/api/projects/status/fg26tpfjv7odbgbu/branch/master?svg=true)](https://ci.appveyor.com/project/PowerShell/AccessControlDsc/branch/master)
+
+dev: [![Build status](https://ci.appveyor.com/api/projects/status/fg26tpfjv7odbgbu/branch/Dev?svg=true)](https://ci.appveyor.com/project/PowerShell/AccessControlDsc/branch/dev)
+
+The **AccessControlDsc** module allows you to configure and manage access control on NTFS and Registry objects.  It also allows
+management of audit access for Active Directory object SACL.
 
 This project has adopted the [Microsoft Open Source Code of Conduct](
   https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of Conduct FAQ](
-  https://opensource.microsoft.com/codeofconduct/faq/) 
+  https://opensource.microsoft.com/codeofconduct/faq/)
 or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions 
 or comments.
 
 ## Contributing
+
 Please check out common DSC Resources [contributing guidelines](
   https://github.com/PowerShell/DscResources/blob/master/CONTRIBUTING.md).
 
 ## Resources
 
-* [AccessControlEntry](#AccessControlEntry): Provides a mechanism to manage access control entries. 
+* **[ActiveDirectoryAuditRule](#ActiveDirectoryAuditRule):** Provides the ability to manage audit access for Active Directory object SACL.
 
-* [SecurityDescriptor](#SecurityDescriptor): Provides a mechanism to manage security descriptors. 
+* **[NtfsAccessEntry](#NtfsAccessEntry):** Provides the ability to manage access entries for NTFS files and directories.
 
-* [SecurityDescriptorSddl](#SecurityDescriptorSddl): Provides a mechanism manage sddl.
+* **[RegistryAccessEntry](#RegistryAccessEntry):** Provides the ability to manage access entries for Registry objects.
 
-### AccessControlEntry
-Provides a mechanism to manage access control entries.
-This resource works on Nano Server.
+### **ActiveDirectoryAuditRule**
 
-#### Requirements
+* **[String] DistinguishedName** _(Key)_: Indicates the Distinguished Name value for the target Active Directory Object.
 
-None
+* **[String] AccessControlList**: Indicates the access control information in the form of an array of instances of the ActiveDirectoryAuditRuleList CIM class. Includes the following properties:
 
-#### Parameters
+  * **[String] Principal:** Indicates the identity of the principal.
 
-* **[String] Path _(Key)_**: The .
+  * **[String] AccessControlEntry:** Indicates the access control entry in the form of an array of instances of the AccessControlList CIM class.  Includes the following properties:
 
-* **[String] ObjectType _(Key)_**: The . 
-{ File | Directory | RegistryKey | Service | WmiNamespace | Cert | AD }.
+    * **[String] AuditFlags:** Specifies the conditions for auditing attempts to access a securable object.
 
-* **[String] Ensure _(Write)_**: Indicates whether the ACE is present or absent. 
-Defaults to Present. { *Present* | Absent }.
+    * **[String] ActiveDirectoryRights:** Specifies the access rights that are assigned to an Active Directory Domain Services object.
 
-* **[String] AceType _(Write)_**: The 
-{ AccessAllowed | AccessDenied | SystemAudit }.
+    * **[String] Ensure:** Whether the rights should be present or absent.
 
-* [Boolean] AuditSuccess _(Write)_: The
+    * **[String] InheritanceType:** Specifies if, and how, ACE information is applied to an object and its descendents.
 
-* [Boolean] AuditFailure _(Write)_: The
+    * **[String] InheritedObjectType:** Specifies the object type name that identifies the type of child object that can inherit this access rule.
 
-* [String] Principal _(Write)_: The
+  * [String] ForcePrincipal: Indicates whether the rights for this principal should be forced.  Will remove any rights not explicitly defined in the configuration for the principal.
 
-* [UInt32] AccessMask _(Write)_: The
+* [Boolean] Force: Indicates whether the rights defined should be enforced.  Will remove any rights not explicitly defined in the configuration for the path.
 
-* [String] AppliesTo _(Write)_: The
+#### ActiveDirectoryAuditRule Examples
 
-* [Boolean] OnlyApplyToThisContainer _(Write)_: The
+* [Set Active Directory OU audit access rules](
+  https://github.com/PowerShell/AccessControlDsc/blob/master/Examples/ActiveDirectoryAuditRuleEntry_example.ps1)
 
-* [Boolean] Specific _(Write)_: The
+### **NtfsAccessEntry**
 
+* **[String] Path** _(Key)_: Indicates the path to the target item.
 
+* **[String] AccessControlList**: Indicates the access control information in the form of an array of instances of the NTFSAccessControlList CIM class. Includes the following properties:
 
-#### Read-Only Properties from Get-TargetResource
+  * **[String] Principal:** Indicates the identity of the principal.
 
-None
+  * **[String] AccessControlEntry:** Indicates the access control entry in the form of an array of instances of the AccessControlList CIM class.  Includes the following properties:
 
-#### Examples
+    * **[String] AccessControlType:** Indicates whether to allow or deny access to the target item.
 
-* [Set Access Control Entry](
-  https://github.com/PowerShell/AccessControlDsc/blob/master/Examples/Sample_AccessControlEntry.ps1)
+    * **[String] FileSystemRights:** Indicates the access rights to be granted to the principal.
 
-### SecurityDescriptor
-Provides a mechanism to manage security descriptors. 
-This resource works on Nano Server.
+    * **[String] Ensure:** Whether the rights should be present or absent.
 
-#### Requirements
+    * **[String] Inheritance:** Indicates the inheritance type of the permission entry.
 
-None
+  * [String] ForcePrincipal: Indicates whether the rights for this principal should be forced.  Will remove any rights not explicitly defined in the configuration for the principal.
 
-#### Parameters
+* [Boolean] Force: Indicates whether the rights defined should be enforced.  Will remove any rights not explicitly defined in the configuration for the path.
 
-* **[String] Path _(Key)_**: The  
+#### NtfsAccessEntry Examples
 
-* **[String] ObjectType _(Key)_**: The .
-{ File | Directory | RegistryKey | Service | WmiNamespace | Cert | AD }.
+* [Set access entries for NTFS folders](
+  https://github.com/PowerShell/AccessControlDsc/blob/master/Examples/NtfsAccessEntry_example.ps1)
 
-* [String] Owner _(Key)_: The .
+### **RegistryAccessEntry**
 
-* [String] Group _(Key)_: The .
+* **[String] Path** _(Key)_: Indicates the path to the target item.
 
-* [String] Access _(Key)_: The .
+* **[String] AccessControlList**: Indicates the access control information in the form of an array of instances of the RegistryRule CIM class. Includes the following properties:
 
-* [String] AccessInheritance _(Key)_: The .
-{ Enabled | Disabled }.
+  * **[String] Principal:** Indicates the identity of the principal.
 
-* [String] Audit _(Key)_: The .
+  * **[String] AccessControlEntry:** Indicates the access control entry in the form of an array of instances of the AccessControlList CIM class.  Includes the following properties:
 
-* [String] AuditInheritance _(Key)_: The .
-{ Enabled | Disabled }.
+    * **[String] AccessControlType:** Indicates whether to allow or deny access to the target item.
 
+    * **[String] Rights:** Indicates the access rights to be granted to the principal.
 
+    * **[String] Ensure:** Whether the rights should be present or absent.
 
-#### Read-Only Properties from Get-TargetResource
+    * **[String] Inheritance:** Indicates the inheritance type of the permission entry.
 
-None
+  * [String] ForcePrincipal: Indicates whether the rights for this principal should be forced.  Will remove any rights not explicitly defined in the configuration for the principal.
 
-#### Examples
+* [Boolean] Force: Indicates whether the rights defined should be enforced.  Will remove any rights not explicitly defined in the configuration for the path.
 
-* [Set Security Descriptor](
-  https://github.com/PowerShell/AccessControlDsc/blob/master/Examples/Sample_SecurityDescriptor.ps1)
+#### RegistryAccessEntry Examples
 
-### SecurityDescriptorSddl
-Provides a mechanism to restore an audit policy backup.
-This resource works on Nano Server.
-
-#### Requirements
-
-None
-
-#### Parameters
-
-* **[String] Path _(Key)_**: The  
-
-* **[String] ObjectType _(Key)_**: The .
-{ File | Directory | RegistryKey | Service | WmiNamespace | Cert | AD }.
-
-* [String] Sddl _(Key)_: The .
-
-
-#### Read-Only Properties from Get-TargetResource
-
-None
-
-#### Examples
-
-* [Apply SDDL](
-  https://github.com/PowerShell/AccessControlDsc/blob/master/Examples/Sample_SecurityDescriptorSddl.ps1)
+* [Configure access entries for registry key](
+  https://github.com/PowerShell/AccessControlDsc/blob/master/Examples/RegistryAccessEntry_example.ps1)
 
 ## Versions
 
 ### Unreleased
 
-* Initial release with the following resources:
- 
-  * AccessControlEntry
-  * SecurityDescriptor
-  * SecurityDescriptorSddl
-
 ### 1.0.0.0
+
+* Initial release with the following resources:
+
+  * ActiveDirectoryAuditRule
+  * NtfsAccessEntry
+  * RegistryAccessEntry
