@@ -1,8 +1,8 @@
 # AccessControlDsc
 
-master: [![Build status](https://ci.appveyor.com/api/projects/status/fg26tpfjv7odbgbu/branch/master?svg=true)](https://ci.appveyor.com/project/PowerShell/AccessControlDsc/branch/master)
+master: [![Build status](https://ci.appveyor.com/api/projects/status/sicoqw7uwykk4aup/branch/master?svg=true)](https://ci.appveyor.com/project/PowerShell/AccessControlDsc/branch/master)
 
-dev: [![Build status](https://ci.appveyor.com/api/projects/status/fg26tpfjv7odbgbu/branch/Dev?svg=true)](https://ci.appveyor.com/project/PowerShell/AccessControlDsc/branch/dev)
+dev: [![Build status](https://ci.appveyor.com/api/projects/status/sicoqw7uwykk4aup/branch/dev?svg=true)](https://ci.appveyor.com/project/PowerShell/AccessControlDsc/branch/dev)
 
 The **AccessControlDsc** module allows you to configure and manage access control on NTFS and Registry objects.  It also allows
 management of audit access for Active Directory object SACL.
