@@ -37,13 +37,13 @@ Please check out common DSC Resources [contributing guidelines](
 
   * **[String] AccessControlEntry:** Indicates the access control entry in the form of an array of instances of the AccessControlList CIM class.  Includes the following properties:
 
-    * **[String] AuditFlags:** Specifies the conditions for auditing attempts to access a securable object.
+    * **[String] AuditFlags:** Specifies the conditions for auditing attempts to access a securable object. _{ Success | Failure }_
 
-    * **[String] ActiveDirectoryRights:** Specifies the access rights that are assigned to an Active Directory Domain Services object.
+    * **[String] ActiveDirectoryRights:** Specifies the access rights that are assigned to an Active Directory Domain Services object. _{ AccessSystemSecurity | CreateAllChildObjects | Delete | DeleteAllChildObjects | DeleteSubtree | AllExtendedRights | FullControl | Execute | Read | Write | ListContents | ListObject | ReadPermissions | ReadAllProperties | AllValidatedWrites | ModifyPermissions | ModifyOwner | WriteAllProperties }_
 
-    * **[String] Ensure:** Whether the rights should be present or absent.
+    * **[String] Ensure:** Whether the rights should be present or absent. _{ Ensure | Present }_
 
-    * **[String] InheritanceType:** Specifies if, and how, ACE information is applied to an object and its descendents.
+    * **[String] InheritanceType:** Specifies if, and how, ACE information is applied to an object and its descendents. _{ All | Children | Descendents | None | SelfAndChildren }_
 
     * **[String] InheritedObjectType:** Specifies the object type name that identifies the type of child object that can inherit this access rule.
 
@@ -66,11 +66,11 @@ Please check out common DSC Resources [contributing guidelines](
 
   * **[String] AccessControlEntry:** Indicates the access control entry in the form of an array of instances of the AccessControlList CIM class.  Includes the following properties:
 
-    * **[String] AccessControlType:** Indicates whether to allow or deny access to the target item.
+    * **[String] AccessControlType:** Indicates whether to allow or deny access to the target item. _{ Allow | Deny }_
 
-    * **[String] FileSystemRights:** Indicates the access rights to be granted to the principal.
+    * **[String] FileSystemRights:** Indicates the access rights to be granted to the principal. _{ AppendData | ChangePermissions | CreateDirectories | CreateFiles | Delete | DeleteSubdirectoriesAndFiles | ExecuteFile | FullControl | ListDirectory | Modify | Read | ReadAndExecute | ReadAttributes | ReadData | ReadExtendedAttributes | ReadPermissions | Synchronize | TakeOwnership | Traverse | Write | WriteAttributes | WriteData | WriteExtendedAttributes }_
 
-    * **[String] Ensure:** Whether the rights should be present or absent.
+    * **[String] Ensure:** Whether the rights should be present or absent. _{ Ensure | Present }_
 
     * **[String] Inheritance:** Indicates the inheritance type of the permission entry.
 
@@ -93,13 +93,13 @@ Please check out common DSC Resources [contributing guidelines](
 
   * **[String] AccessControlEntry:** Indicates the access control entry in the form of an array of instances of the AccessControlList CIM class.  Includes the following properties:
 
-    * **[String] AccessControlType:** Indicates whether to allow or deny access to the target item.
+    * **[String] AccessControlType:** Indicates whether to allow or deny access to the target item. _{ Allow | Deny }_
 
-    * **[String] Rights:** Indicates the access rights to be granted to the principal.
+    * **[String] Rights:** Indicates the access rights to be granted to the principal. _{ ChangePermissions | CreateLink | CreateSubKey | Delete | EnumerateSubKeys | ExecuteKey | FullControl | Notify | QueryValues | ReadKey | ReadPermissions | SetValue | TakeOwnership | WriteKey }_
 
-    * **[String] Ensure:** Whether the rights should be present or absent.
+    * **[String] Ensure:** Whether the rights should be present or absent. _{ Ensure | Present }_
 
-    * **[String] Inheritance:** Indicates the inheritance type of the permission entry.
+    * **[String] Inheritance:** Indicates the inheritance type of the permission entry. _{ This Key Only | This Key and Subkeys | SubKeys Only }_
 
   * [String] ForcePrincipal: Indicates whether the rights for this principal should be forced.  Will remove any rights not explicitly defined in the configuration for the principal.
 
