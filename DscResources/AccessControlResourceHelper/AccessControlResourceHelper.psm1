@@ -20,10 +20,12 @@ function Resolve-Identity
     )
     process
     {
-        try
-        {
-            Write-Verbose -Message "Resolving identity for '$Identity'."
+        Write-Verbose -Message "Resolving identity for '$Identity'."
 
+        $tryNTService = $false
+
+        try 
+        {  
             if ($Identity -match '^S-\d-(\d+-){1,14}\d+$')
             {
                 [System.Security.Principal.SecurityIdentifier]$Identity = $Identity
@@ -45,9 +47,31 @@ function Resolve-Identity
         }
         catch
         {
-            $ErrorMessage = "Could not resolve identity '{0}': '{1}'." -f $Identity, $_.Exception.Message
-            Write-Error -Exception $_.Exception -Message $ErrorMessage
+            # Try to resolve identity to NT Service
+            $tryNTService = $true
         }
+
+        if ($tryNTService)
+        {
+            try
+            {
+                [System.Security.Principal.NTAccount]$Id = "NT Service\" + $Identity
+                $SID = $Id.Translate([System.Security.Principal.SecurityIdentifier])
+                $NTAccount = $SID.Translate([System.Security.Principal.NTAccount])
+                
+                $Principal = [PSCustomObject]@{
+                    Name = $NTAccount.Value
+                    SID = $SID.Value
+                }
+    
+                return $Principal
+            }
+            catch
+            {
+                $ErrorMessage = "Could not resolve identity '{0}': '{1}'." -f $Identity, $_.Exception.Message
+                Write-Error -Exception $_.Exception -Message $ErrorMessage
+            }
+        }        
     }
 }
 
@@ -72,13 +96,25 @@ function ConvertTo-SID
         $IdentityReference
     )
 
-    If($IdentityReference.Contains("\"))
+    try 
     {
-        $IdentityReference = $IdentityReference.split('\')[1]
+        If($IdentityReference.Contains("\"))
+        {
+            $IdentityReference = $IdentityReference.split('\')[1]
+        }
+        
+        [System.Security.Principal.NTAccount]$PrinicipalName = $IdentityReference
+        $SID = $PrinicipalName.Translate([System.Security.Principal.SecurityIdentifier])
+    
+        Return $SID
+    }
+    catch 
+    {
+        # Probably NT Service which needs domain portion to translate without error
+        [System.Security.Principal.NTAccount]$Id = "NT Service\" + $IdentityReference
+        $SID = $Id.Translate([System.Security.Principal.SecurityIdentifier])
+
+        return $SID
     }
     
-    [System.Security.Principal.NTAccount]$PrinicipalName = $IdentityReference
-    $SID = $PrinicipalName.Translate([System.Security.Principal.SecurityIdentifier])
-
-    Return $SID
 }

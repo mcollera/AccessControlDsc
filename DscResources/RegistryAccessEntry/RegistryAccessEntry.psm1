@@ -131,7 +131,7 @@ Function Set-TargetResource
         {
             $Principal = $AccessControlItem.Principal
             $Identity = Resolve-Identity -Identity $Principal
-            $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
+            $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
             $ACLRules += ConvertTo-RegistryAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
         }    
@@ -150,7 +150,7 @@ Function Set-TargetResource
         {
             $Principal = $AccessControlItem.Principal
             $Identity = Resolve-Identity -Identity $Principal
-            $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
+            $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
             $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
@@ -195,7 +195,7 @@ Function Set-TargetResource
                 $PrinicipalName = $Rule.IdentityReference.Value.split('\')[1]
                 [System.Security.Principal.NTAccount]$PrinicipalName = $PrinicipalName
                 $SID = $PrinicipalName.Translate([System.Security.Principal.SecurityIdentifier])
-                $SIDRule = [System.Security.AccessControl.RegistryAccessRule]::new($SID, $Rule.RegistryRights.value__, $Rule.InheritanceFlags.value__, $Rule.PropagationFlags.value__, $Rule.AccessControlType.value__)
+                $SIDRule = New-Object System.Security.AccessControl.RegistryAccessRule($SID, $Rule.RegistryRights.value__, $Rule.InheritanceFlags.value__, $Rule.PropagationFlags.value__, $Rule.AccessControlType.value__)
                 $currentAcl.RemoveAccessRule($SIDRule)
             }
             catch
@@ -238,8 +238,8 @@ Function Test-TargetResource
 
     if(-not (Test-Path -Path $Path))
     {
-        $errorMessage = $LocalizedData.ErrorPathNotFound -f $Path
-        throw $errorMessage
+        $LocalizedData.ErrorPathNotFound -f $Path | Write-Verbose
+        return $true
     }
 
     $currentAcl = Get-Acl -Path $Path
@@ -250,7 +250,7 @@ Function Test-TargetResource
         {
             $Principal = $AccessControlItem.Principal
             $Identity = Resolve-Identity -Identity $Principal
-            $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
+            $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
             $ACLRules += ConvertTo-RegistryAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
         }    
@@ -269,7 +269,7 @@ Function Test-TargetResource
         {
             $Principal = $AccessControlItem.Principal
             $Identity = Resolve-Identity -Identity $Principal
-            $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
+            $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
             $ACLRules = ConvertTo-RegistryAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
 
@@ -329,7 +329,7 @@ Function ConvertTo-RegistryAccessRule
         $Inheritance = Get-RegistryRuleInheritenceFlags -Inheritance $ace.Inheritance
 
         $rule = [PSCustomObject]@{
-            Rules = [System.Security.AccessControl.RegistryAccessRule]::new($IdentityRef, $ace.Rights, $Inheritance.InheritanceFlag, $Inheritance.PropagationFlag, $ace.AccessControlType)
+            Rules = New-Object System.Security.AccessControl.RegistryAccessRule($IdentityRef, $ace.Rights, $Inheritance.InheritanceFlag, $Inheritance.PropagationFlag, $ace.AccessControlType)
             Ensure = $ace.Ensure
         }
         $refrenceObject += $rule

@@ -139,7 +139,7 @@ Function Set-TargetResource
                 {
                     $Principal = $AccessControlItem.Principal
                     $Identity = Resolve-Identity -Identity $Principal
-                    $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
+                    $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
                     $ACLRules += ConvertTo-ActiveDirectoryAuditRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
                 }    
@@ -158,7 +158,7 @@ Function Set-TargetResource
                 {
                     $Principal = $AccessControlItem.Principal
                     $Identity = Resolve-Identity -Identity $Principal
-                    $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
+                    $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
                     $actualAce = $currentAcl.Audit.Where({$_.IdentityReference -eq $Identity.Name})
 
@@ -284,7 +284,7 @@ Function Test-TargetResource
                 {
                     $Principal = $AccessControlItem.Principal
                     $Identity = Resolve-Identity -Identity $Principal
-                    $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
+                    $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
                     $ACLRules += ConvertTo-ActiveDirectoryAuditRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
                 }    
@@ -303,7 +303,7 @@ Function Test-TargetResource
                 {
                     $Principal = $AccessControlItem.Principal
                     $Identity = Resolve-Identity -Identity $Principal
-                    $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
+                    $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
                     $ACLRules = ConvertTo-ActiveDirectoryAuditRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
 
@@ -408,7 +408,7 @@ Function ConvertTo-ActiveDirectoryAuditRule
     {
         $InheritedObjectType = Get-SchemaIdGuid -ObjectName $ace.InheritedObjectType
         $rule = [PSCustomObject]@{
-            Rules = [System.DirectoryServices.ActiveDirectoryAuditRule]::new($IdentityRef, $ace.ActiveDirectoryRights, $ace.AuditFlags, $ace.InheritanceType, $InheritedObjectType)
+            Rules = New-Object System.DirectoryServices.ActiveDirectoryAuditRule($IdentityRef, $ace.ActiveDirectoryRights, $ace.AuditFlags, $ace.InheritanceType, $InheritedObjectType)
             Ensure = $ace.Ensure
         }
         $refrenceObject += $rule
