@@ -23,7 +23,7 @@
     Copyright = '(c) 2017 Microsoft. All rights reserved.'
     
     # Description of the functionality provided by this module
-    Description = 'Provides an easy way to view and modify security descriptors for most securable objects in Windows, including files, folders, registry keys, services, printers, shares, processes, and more. Most actions possible from the ACL Editor GUI can be performed with this module.'
+    Description = 'Module with DSC resource to manage Registry and NTFS access entries and manage Active Directory SACL'
     
     # Minimum version of the Windows PowerShell engine required by this module
     PowerShellVersion = '4.0'
@@ -95,13 +95,13 @@ PrivateData = @{
     
             # Tags applied to this module. These help with module discovery in online galleries.
             Tags = @('DesiredStateConfiguration', 'DSC', 'DSCResourceKit', 'DSCResource', 
-                     'AccessControlDsc', 'DACL', 'SACL')
+                     'AccessControlDsc', 'DACL', 'SACL', 'Permissions')
     
             # A URL to the license for this module.
-            LicenseUri = 'https://github.com/PowerShell/AccessControlDsc/blob/master/LICENSE'
+            LicenseUri = 'https://github.com/mcollera/AccessControlDsc/blob/master/LICENSE'
     
             # A URL to the main website for this project.
-            ProjectUri = 'https://github.com/PowerShell/AccessControlDsc'
+            ProjectUri = 'https://github.com/mcollera/AccessControlDsc'
     
             # A URL to an icon representing this module.
             # IconUri = ''

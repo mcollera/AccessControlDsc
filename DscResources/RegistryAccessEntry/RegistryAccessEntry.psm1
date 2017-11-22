@@ -20,7 +20,7 @@ Function Get-TargetResource
     [OutputType([Hashtable])]
     param
     (
-        [parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [System.String]
         $Path,
 
@@ -28,6 +28,7 @@ Function Get-TargetResource
         [Microsoft.Management.Infrastructure.CimInstance[]]
         $AccessControlList,
 
+        [Parameter()]
         [bool]
         $Force = $false
     )
@@ -45,7 +46,7 @@ Function Get-TargetResource
     $CimAccessControlList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
 
     if($null -ne $currentACL) 
-    { 
+    {
         $message = $LocalizedData.AclFound -f $Path 
         Write-Verbose -Message $message 
         
@@ -99,7 +100,7 @@ Function Set-TargetResource
     [CmdletBinding()]
     param
     (
-        [parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [System.String]
         $Path,
 
@@ -107,6 +108,7 @@ Function Set-TargetResource
         [Microsoft.Management.Infrastructure.CimInstance[]]
         $AccessControlList,
 
+        [Parameter()]
         [bool]
         $Force = $false
     )
@@ -221,7 +223,7 @@ Function Test-TargetResource
     [OutputType([System.Boolean])]
     param
     (
-        [parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [System.String]
         $Path,
 
@@ -229,6 +231,7 @@ Function Test-TargetResource
         [Microsoft.Management.Infrastructure.CimInstance[]]
         $AccessControlList,
 
+        [Parameter()]
         [bool]
         $Force = $false
     )
@@ -425,7 +428,7 @@ Function Get-RegistryRuleInheritenceFlags
     [CmdletBinding()]
     param
     (
-        [parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [System.String]
         $Inheritance
     )
@@ -462,11 +465,11 @@ Function Get-RegistryRuleInheritenceName
     [CmdletBinding()]
     param
     (
-        [parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [System.String]
         $InheritanceFlag,
 
-        [parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $true)]
         [System.String]
         $PropagationFlag
     )
