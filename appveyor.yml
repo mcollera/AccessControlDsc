@@ -31,16 +31,20 @@ test_script:
 #---------------------------------# 
 #      deployment configuration   # 
 #---------------------------------# 
-
+deploy:
+- provider: NuGet
+  server: https://www.powershellgallery.com/api/v2/
+  api_key:
+    secure: xshObWBpV6ZqLVAj9MtMppDPjHum8oiHY874aC4+KTp1HE6BUVcI7nrHkm5H4NaO
+  on:
+    branch: master
+- provider: GitHub
+  auth_token:
+    secure: HK4IZqx5rQtJgCghgc3C8SJIE2JxkZ+o5C04j3itP7kp1bJp6hscVLgEO4KTCYWW
+  on:
+    branch: master
 # scripts to run before deployment 
 deploy_script: 
-  - provider: NuGet
-    server: https://www.powershellgallery.com/api/v2/
-    api_key:
-        secure: xshObWBpV6ZqLVAj9MtMppDPjHum8oiHY874aC4+KTp1HE6BUVcI7nrHkm5H4NaO
-    on:
-        branch: master
-
   - ps: |
       # Creating project artifact
       $stagingDirectory = (Resolve-Path ..).Path
