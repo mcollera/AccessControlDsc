@@ -1,5 +1,4 @@
 #requires -Version 4.0 -Modules Pester
-#requires -RunAsAdministrator
 
 #region Setup for tests
 
@@ -11,14 +10,14 @@ Import-Module "$($PSScriptRoot)\..\TestHelper.psm1" -Force
 
 #endregion
 
-InModuleScope ActiveDirectoryAuditRuleEntry {
+#InModuleScope ActiveDirectoryAuditRuleEntry {
     $DSCResourceName = 'ActiveDirectoryAuditRuleEntry'
     Describe "$DSCResourceName\Get-TargetResource" {
 
-        Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" }
+        Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" } -ModuleName $DSCResourceName
         Mock -CommandName Test-Path -MockWith { return $true }
-        Mock -CommandName Assert-Module -MockWith {}
-        Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'}
+        Mock -CommandName Assert-Module -MockWith {} -ModuleName $DSCResourceName
+        Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'} -ModuleName $DSCResourceName
 
         Context "Should return current Audit Rules" {
             Mock -CommandName Get-Acl -MockWith {
@@ -108,12 +107,12 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
 
     Describe "$DSCResourceName\Test-TargetResource" {
         
-        Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" }
-        Mock -CommandName Test-Path -MockWith { return $true }
-        Mock -CommandName Assert-Module -MockWith {}
-        Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'}
-        Mock -CommandName Get-SchemaIdGuid -MockWith { return [guid]"52ea1a9a-be7e-4213-9e69-5f28cb89b56a" }
-        Mock -CommandName Get-SchemaObjectName -MockWith { return "Pwd-Last-Set" }
+        Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" } -ModuleName $DSCResourceName
+        Mock -CommandName Test-Path -MockWith { return $true } -ModuleName $DSCResourceName
+        Mock -CommandName Assert-Module -MockWith {} -ModuleName $DSCResourceName
+        Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'}-ModuleName $DSCResourceName 
+        Mock -CommandName Get-SchemaIdGuid -MockWith { return [guid]"52ea1a9a-be7e-4213-9e69-5f28cb89b56a" } -ModuleName $DSCResourceName
+        Mock -CommandName Get-SchemaObjectName -MockWith { return "Pwd-Last-Set" } -ModuleName $DSCResourceName
 
         Mock -CommandName Get-Acl -MockWith {
             $collection = [System.Security.AccessControl.AuthorizationRuleCollection]::new()
@@ -258,12 +257,12 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
 
     Describe "Helper Functions" {
 
-        Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" }
-        Mock -CommandName Test-Path -MockWith { return $true }
-        Mock -CommandName Assert-Module -MockWith {}
-        Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'}
-        Mock -CommandName Get-SchemaIdGuid -MockWith { return [guid]"52ea1a9a-be7e-4213-9e69-5f28cb89b56a" }
-        Mock -CommandName Get-SchemaObjectName -MockWith { return "Pwd-Last-Set" }
+        Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" } -ModuleName $DSCResourceName
+        Mock -CommandName Test-Path -MockWith { return $true } -ModuleName $DSCResourceName
+        Mock -CommandName Assert-Module -MockWith {} -ModuleName $DSCResourceName
+        Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'} -ModuleName $DSCResourceName
+        Mock -CommandName Get-SchemaIdGuid -MockWith { return [guid]"52ea1a9a-be7e-4213-9e69-5f28cb89b56a" } -ModuleName $DSCResourceName
+        Mock -CommandName Get-SchemaObjectName -MockWith { return "Pwd-Last-Set" } -ModuleName $DSCResourceName
 
         $Identity = Resolve-Identity -Identity "Everyone"
         $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
@@ -390,4 +389,4 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
             }
         }
     }        
-}
+#}

@@ -98,7 +98,7 @@ Function Get-TargetResource
 
     $ReturnValue = @{
         Force = $Force
-        DistinguishedName = $Path
+        DistinguishedName = $DistinguishedName
         AccessControlList = $CimAccessControlList
     }
 
