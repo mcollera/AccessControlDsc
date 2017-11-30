@@ -48,7 +48,7 @@ try
         $ConfigurationName = "$($DSCResourceName)_Test"
         It 'Should compile without throwing' {
             {
-                & $ConfigurationName $ConfigPath
+                & $ConfigurationName -OutputPath $ConfigPath
                 Start-DscConfiguration -Path $configPath -ComputerName localhost -Force -Verbose -Wait
             } | Should Not Throw
         }

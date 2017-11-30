@@ -43,7 +43,7 @@ try
 
         It 'Should compile without throwing' {
             {
-                & $ConfigurationName $TestParameter.Path
+                & $ConfigurationName -OutputPath $TestParameter.Path
                 Start-DscConfiguration -Path $TestParameter.Path -ComputerName localhost -Force -Verbose -Wait
             } | Should Not Throw
         }
