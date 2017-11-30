@@ -1,4 +1,4 @@
-﻿configuration Sample_NTFSAccessControl
+configuration Sample_NTFSAccessControl
 {
     Import-DscResource -ModuleName AccessControlDsc
     node localhost
