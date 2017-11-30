@@ -1,4 +1,4 @@
-﻿$TestParameter = [PSCustomObject]@{
+$TestParameter = [PSCustomObject]@{
     Ensure = 'Present'
     Path = 'HKLM:\Software\TestKey'
     Principal = 'Everyone'

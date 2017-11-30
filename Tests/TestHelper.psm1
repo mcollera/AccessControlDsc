@@ -1,4 +1,4 @@
-﻿function Set-NewTempItemAcl
+function Set-NewTempItemAcl
 {
     <#
     .SYNOPSIS

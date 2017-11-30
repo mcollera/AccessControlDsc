@@ -138,7 +138,7 @@ Function Set-TargetResource
         
         $actualAce = $currentAcl.Access
 
-        $Results = Compare-RegistryRules -Expected $ACLRules -Actual $actualAce
+        $Results = Compare-RegistryRule -Expected $ACLRules -Actual $actualAce
 
         $Expected = $Results.Rules
         $AbsentToBeRemoved = $Results.Absent
@@ -155,7 +155,7 @@ Function Set-TargetResource
             $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
             $ACLRules = ConvertTo-RegistryAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
-            $Results = Compare-RegistryRules -Expected $ACLRules -Actual $actualAce
+            $Results = Compare-RegistryRule -Expected $ACLRules -Actual $actualAce
 
             $Expected += $Results.Rules
             $AbsentToBeRemoved += $Results.Absent
@@ -257,7 +257,7 @@ Function Test-TargetResource
         
         $actualAce = $currentAcl.Access
 
-        $Results = Compare-RegistryRules -Expected $ACLRules -Actual $actualAce
+        $Results = Compare-RegistryRule -Expected $ACLRules -Actual $actualAce
 
         $Expected = $Results.Rules
         $AbsentToBeRemoved = $Results.Absent
@@ -275,7 +275,7 @@ Function Test-TargetResource
 
             $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
-            $Results = Compare-RegistryRules -Expected $ACLRules -Actual $actualAce
+            $Results = Compare-RegistryRule -Expected $ACLRules -Actual $actualAce
 
             $Expected += $Results.Rules
             $AbsentToBeRemoved += $Results.Absent
@@ -326,7 +326,7 @@ Function ConvertTo-RegistryAccessRule
 
     foreach($ace in $AccessControlList.AccessControlEntry)
     {
-        $Inheritance = Get-RegistryRuleInheritenceFlags -Inheritance $ace.Inheritance
+        $Inheritance = Get-RegistryRuleInheritenceFlag -Inheritance $ace.Inheritance
 
         $rule = [PSCustomObject]@{
             Rules = New-Object System.Security.AccessControl.RegistryAccessRule($IdentityRef, $ace.Rights, $Inheritance.InheritanceFlag, $Inheritance.PropagationFlag, $ace.AccessControlType)
@@ -338,7 +338,7 @@ Function ConvertTo-RegistryAccessRule
     return $refrenceObject
 }
 
-Function Compare-RegistryRules
+Function Compare-RegistryRule
 {
     param
     (
@@ -423,7 +423,7 @@ Function Compare-RegistryRules
     }
 }
 
-Function Get-RegistryRuleInheritenceFlags
+Function Get-RegistryRuleInheritenceFlag
 {
     [CmdletBinding()]
     param
@@ -463,6 +463,7 @@ Function Get-RegistryRuleInheritenceFlags
 Function Get-RegistryRuleInheritenceName
 {
     [CmdletBinding()]
+    [OutputType([System.String])]
     param
     (
         [Parameter(Mandatory = $true)]

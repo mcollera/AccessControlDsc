@@ -2,15 +2,14 @@
 #requires -RunAsAdministrator
 
 #region Setup for tests
-$Global:DSCModuleName = 'AccessControlDsc'
-$Global:DSCResourceName = 'NTFSAccessEntry'
+$DSCResourceName = 'NTFSAccessEntry'
 
-Import-Module "$($PSScriptRoot)\..\..\DSCResources\$($Global:DSCResourceName)\$($Global:DSCResourceName).psm1" -Force
+Import-Module "$($PSScriptRoot)\..\..\DSCResources\$($DSCResourceName)\$($DSCResourceName).psm1" -Force
 Import-Module "$($PSScriptRoot)\..\TestHelper.psm1" -Force
-Import-Module Pester -Force
+
 #endregion
 
-Describe "$Global:DSCResourceName\Get-TargetResource" {
+Describe "$DSCResourceName\Get-TargetResource" {
     Context "Permissions should exist" {
         $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights FullControl -Inheritance 'This Folder and Files' -Ensure Absent 
         $pathName = "$TestDrive\TestDirectory"
@@ -49,7 +48,7 @@ Describe "$Global:DSCResourceName\Get-TargetResource" {
         )
 
         Set-NewTempItemAcl -Path $PathName -AccessRulesToAdd $TempAccessRules -PassThru
-        $GetResult = & "$($Global:DSCResourceName)\Get-TargetResource" @ContextParams
+        $GetResult = & "$($DSCResourceName)\Get-TargetResource" @ContextParams
 
         It 'Should return Ensure set as empty' {
             $GetResult.AccessControl.AccessControlEntry.Ensure | Should Be $null
@@ -102,7 +101,7 @@ Describe "$Global:DSCResourceName\Get-TargetResource" {
     }
 }
 
-Describe "$Global:DSCResourceName\Test-TargetResource behavior with Ensure set to Absent" {
+Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Absent" {
     Context 'AccessControlInformation is specified, no permissions exist' {
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $false -AccessControlType Allow -FileSystemRights ChangePermissions -Inheritance 'This Folder and Files' -Ensure Absent
@@ -250,7 +249,7 @@ Describe "$Global:DSCResourceName\Test-TargetResource behavior with Ensure set t
     }
 }
 
-Describe "$Global:DSCResourceName\Test-TargetResource behavior with Ensure set to Present" {
+Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Present" {
     Context 'AccessControlInformation is specified, no permissions exist' {
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $false -AccessControlType Allow -FileSystemRights ReadAndExecute -Inheritance 'Subfolders and Files Only' -Ensure Present
@@ -380,7 +379,7 @@ Describe "$Global:DSCResourceName\Test-TargetResource behavior with Ensure set t
     }
 }
 
-Describe "$Global:DSCResourceName\Set-TargetResource behavior with Ensure set to Absent" {
+Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Absent" {
     Context 'AccessControlInformation is not specified' {
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $true -Ensure Absent
@@ -658,7 +657,7 @@ Describe "$Global:DSCResourceName\Set-TargetResource behavior with Ensure set to
     }
 }
 
-Describe "$Global:DSCResourceName\Set-TargetResource behavior with Ensure set to Present" {
+Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Present" {
     Context 'AccessControlInformation is not specified' {
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $true -Ensure Present
@@ -952,59 +951,59 @@ Describe "$Global:DSCResourceName\Set-TargetResource behavior with Ensure set to
     }
 }
 
-Describe "$Global:DSCResourceName\Get-NtfsInheritenceFlags" {
+Describe "$DSCResourceName\Get-NtfsInheritenceFlag" {
     Context "Inheritance Names" {
         It "Should return 0-0" {
-            $InheritanceFlags = Get-NtfsInheritenceFlags -Inheritance "This folder only"
+            $InheritanceFlags = Get-NtfsInheritenceFlag -Inheritance "This folder only"
 
             $InheritanceFlags.InheritanceFlag | Should be 0
             $InheritanceFlags.PropagationFlag | Should be 0
         }
 
         It "Should return 3-0" {
-            $InheritanceFlags = Get-NtfsInheritenceFlags -Inheritance "This folder subfolders and files"
+            $InheritanceFlags = Get-NtfsInheritenceFlag -Inheritance "This folder subfolders and files"
 
             $InheritanceFlags.InheritanceFlag | Should be 3
             $InheritanceFlags.PropagationFlag | Should be 0
         }
 
         It "Should return 1-0" {
-            $InheritanceFlags = Get-NtfsInheritenceFlags -Inheritance "This folder and subfolders"
+            $InheritanceFlags = Get-NtfsInheritenceFlag -Inheritance "This folder and subfolders"
 
             $InheritanceFlags.InheritanceFlag | Should be 1
             $InheritanceFlags.PropagationFlag | Should be 0
         }
 
         It "Should return 2-0" {
-            $InheritanceFlags = Get-NtfsInheritenceFlags -Inheritance "This folder and files"
+            $InheritanceFlags = Get-NtfsInheritenceFlag -Inheritance "This folder and files"
              
             $InheritanceFlags.InheritanceFlag | Should be 2
             $InheritanceFlags.PropagationFlag | Should be 0
         }
 
         It "Should return 3-2" {
-            $InheritanceFlags = Get-NtfsInheritenceFlags -Inheritance "Subfolders and files only"
+            $InheritanceFlags = Get-NtfsInheritenceFlag -Inheritance "Subfolders and files only"
 
             $InheritanceFlags.InheritanceFlag | Should be 3
             $InheritanceFlags.PropagationFlag | Should be 2
         }
 
         It "Should return 1-2" {
-            $InheritanceFlags = Get-NtfsInheritenceFlags -Inheritance "Subfolders only"
+            $InheritanceFlags = Get-NtfsInheritenceFlag -Inheritance "Subfolders only"
 
             $InheritanceFlags.InheritanceFlag | Should be 1
             $InheritanceFlags.PropagationFlag | Should be 2
         }
 
         It "Should return 2-2" {
-            $InheritanceFlags = Get-NtfsInheritenceFlags -Inheritance "Files only"
+            $InheritanceFlags = Get-NtfsInheritenceFlag -Inheritance "Files only"
 
             $InheritanceFlags.InheritanceFlag | Should be 2
             $InheritanceFlags.PropagationFlag | Should be 2
         } 
 
         It "Should return null when abnormal Inheritance is passed" {
-            $InheritanceFlags = Get-NtfsInheritenceFlags -Inheritance "The files are 'in' the computer."
+            $InheritanceFlags = Get-NtfsInheritenceFlag -Inheritance "The files are 'in' the computer."
 
             $InheritanceFlags.InheritanceFlag | Should be $null
             $InheritanceFlags.PropagationFlag | Should be $null
@@ -1012,7 +1011,7 @@ Describe "$Global:DSCResourceName\Get-NtfsInheritenceFlags" {
     }
 }
 
-Describe "$Global:DSCResourceName\Get-NtfsInheritenceName" {
+Describe "$DSCResourceName\Get-NtfsInheritenceName" {
     Context "Inheritance and Propagation Flags" {
         It "Should return This folder only" {
             $InheritanceName = Get-NtfsInheritenceName -InheritanceFlag 0 -PropagationFlag 0
@@ -1064,7 +1063,7 @@ Describe "$Global:DSCResourceName\Get-NtfsInheritenceName" {
     }
 }
 
-Describe "$Global:DSCResourceName\ConvertTo-FileSystemAccessRule" {
+Describe "$DSCResourceName\ConvertTo-FileSystemAccessRule" {
     Context "Should convert to a valid File System Access Rule" {
         It "Should return a FilseSystemAccessRule Object" {
            $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights FullControl -Inheritance 'This Folder and Files' -Ensure Absent 
@@ -1087,8 +1086,8 @@ Describe "$Global:DSCResourceName\ConvertTo-FileSystemAccessRule" {
     }
 }
 
-Describe "$Global:DSCResourceName\Compare-NtfsRules" {
-    Context "Compare-NtfsRules with Ensure set to Absent with no matching rules" {
+Describe "$DSCResourceName\Compare-NtfsRule" {
+    Context "Compare-NtfsRule with Ensure set to Absent with no matching rules" {
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights FullControl -Inheritance 'This Folder and Files' -Ensure Absent
         $ContextParams = @{
@@ -1136,14 +1135,14 @@ Describe "$Global:DSCResourceName\Compare-NtfsRules" {
         $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
         It "Should not have any Rules to be removed" {
-            $testComparison = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce -Force $TempAcl.ForcePrincipal
+            $testComparison = Compare-NtfsRule -Expected $ACLRules -Actual $actualAce -Force $TempAcl.ForcePrincipal
 
             $testComparison.ToBeRemoved.Rule.Count | Should be $actualAce.Count
             $testComparison.Absent | Should Be $null
         }
     }
 
-    Context "Compare-NtfsRules with Ensure set to Absent with matching rules" {
+    Context "Compare-NtfsRule with Ensure set to Absent with matching rules" {
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $true -AccessControlType Allow -FileSystemRights "ReadAndExecute" -Inheritance "This folder subfolders and files" -Ensure Absent
         $ContextParams = @{
@@ -1191,14 +1190,14 @@ Describe "$Global:DSCResourceName\Compare-NtfsRules" {
         $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
         It "Should have matching rule to be removed" {
-            $testComparison = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce -Force $TempAcl.ForcePrincipal
+            $testComparison = Compare-NtfsRule -Expected $ACLRules -Actual $actualAce -Force $TempAcl.ForcePrincipal
 
             $testComparison.ToBeRemoved.Rule.Count | Should be ($actualAce.Count - $TempAcl.AccessControlEntry.Count) 
             $testComparison.Absent.Count | Should Be $TempAcl.AccessControlEntry.Count
         }
     }
 
-    Context "Compare-NtfsRules with Ensure set to Present with no matching rules" {
+    Context "Compare-NtfsRule with Ensure set to Present with no matching rules" {
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights "ReadAndExecute" -Inheritance "This folder subfolders and files" -Ensure Present
         $ContextParams = @{
@@ -1237,14 +1236,14 @@ Describe "$Global:DSCResourceName\Compare-NtfsRules" {
         $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
         It "Should have new rule to add" {
-            $testComparison = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce -Force $TempAcl.ForcePrincipal
+            $testComparison = Compare-NtfsRule -Expected $ACLRules -Actual $actualAce -Force $TempAcl.ForcePrincipal
 
             $testComparison.ToBeRemoved.Rule.Count | Should be $TempAccessRules.Count
             $testComparison.Rules.Count | Should be $TempAcl.AccessControlEntry.Count
         }
     }
 
-    Context "Compare-NtfsRules with Ensure set to Present with matching rules" { 
+    Context "Compare-NtfsRule with Ensure set to Present with matching rules" { 
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights "Modify" -Inheritance "This Folder Only" -Ensure Present
         $ContextParams = @{
@@ -1283,7 +1282,7 @@ Describe "$Global:DSCResourceName\Compare-NtfsRules" {
         $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
         It "Should have classify rules differently" {
-            $testComparison = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce -Force $TempAcl.ForcePrincipal
+            $testComparison = Compare-NtfsRule -Expected $ACLRules -Actual $actualAce -Force $TempAcl.ForcePrincipal
 
             $testComparison.ToBeRemoved.Rule.Count | Should be ($TempAccessRules.Count - $TempAcl.AccessControlEntry.Count)
             $testComparison.Rules.Count | Should be $TempAcl.AccessControlEntry.Count
@@ -1292,7 +1291,7 @@ Describe "$Global:DSCResourceName\Compare-NtfsRules" {
     }
 }
 
-Describe "$Global:DSCResourceName\ResourceHelper\Resolve-Identity" {
+Describe "$DSCResourceName\ResourceHelper\Resolve-Identity" {
     Context "Resolve Username" {
         It "Should resolve when input is a username" {
             $Identity = Resolve-Identity -Identity "Local"
@@ -1318,7 +1317,7 @@ Describe "$Global:DSCResourceName\ResourceHelper\Resolve-Identity" {
     }
 }
 
-Describe "$Global:DSCResourceName\ResourceHelper\ConvertTo-SID" {
+Describe "$DSCResourceName\ResourceHelper\ConvertTo-SID" {
     Context "Identity will contain a '\' e.g. BUILTIN\Users" {
         It "Should return a proper SID" {
             $SID = ConvertTo-SID -IdentityReference "BUILTIN\Users"

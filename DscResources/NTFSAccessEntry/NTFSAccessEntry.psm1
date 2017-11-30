@@ -137,7 +137,7 @@ Function Set-TargetResource
         
                 $actualAce = $currentAcl.Access
 
-                $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce -Force $AccessControlItem.ForcePrincipal
+                $Results = Compare-NtfsRule -Expected $ACLRules -Actual $actualAce -Force $AccessControlItem.ForcePrincipal
 
                 $Expected = $Results.Rules
                 $AbsentToBeRemoved = $Results.Absent
@@ -154,7 +154,7 @@ Function Set-TargetResource
                     $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
                     $ACLRules = ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
-                    $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce -Force $AccessControlItem.ForcePrincipal
+                    $Results = Compare-NtfsRule -Expected $ACLRules -Actual $actualAce -Force $AccessControlItem.ForcePrincipal
 
                     $Expected += $Results.Rules
                     $AbsentToBeRemoved += $Results.Absent
@@ -297,7 +297,7 @@ Function Test-TargetResource
         
                 $actualAce = $mappedACL.Access
 
-                $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce -Force $AccessControlItem.ForcePrincipal
+                $Results = Compare-NtfsRule -Expected $ACLRules -Actual $actualAce -Force $AccessControlItem.ForcePrincipal
 
                 $Expected = $Results.Rules
                 $AbsentToBeRemoved = $Results.Absent
@@ -315,7 +315,7 @@ Function Test-TargetResource
 
                     $actualAce = $mappedACL.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
-                    $Results = Compare-NtfsRules -Expected $ACLRules -Actual $actualAce -Force $AccessControlItem.ForcePrincipal
+                    $Results = Compare-NtfsRule -Expected $ACLRules -Actual $actualAce -Force $AccessControlItem.ForcePrincipal
 
                     $Expected += $Results.Rules
                     $AbsentToBeRemoved += $Results.Absent
@@ -400,7 +400,7 @@ Function Test-TargetResource
     return $InDesiredState
 }
 
-Function Get-NtfsInheritenceFlags
+Function Get-NtfsInheritenceFlag
 {
     [CmdletBinding()]
     param
@@ -519,7 +519,7 @@ Function ConvertTo-FileSystemAccessRule
 
     foreach($ace in $AccessControlList.AccessControlEntry)
     {
-        $Inheritance = Get-NtfsInheritenceFlags -Inheritance $ace.Inheritance
+        $Inheritance = Get-NtfsInheritenceFlag -Inheritance $ace.Inheritance
 
         $rule = [PSCustomObject]@{
             Rules = New-Object System.Security.AccessControl.FileSystemAccessRule($IdentityRef, $ace.FileSystemRights, $Inheritance.InheritanceFlag, $Inheritance.PropagationFlag, $ace.AccessControlType)
@@ -531,7 +531,7 @@ Function ConvertTo-FileSystemAccessRule
     return $refrenceObject
 }
 
-Function Compare-NtfsRules
+Function Compare-NtfsRule
 {
     param
     (
@@ -635,7 +635,7 @@ Function Update-FileSystemRightsMapping
         if( ($rightsBand -gt 0) -or ($rightsBand -lt 0) )
         {
             $SID = ConvertTo-SID -IdentityReference $Rule.IdentityReference
-            $mappedRight = Get-MappedGenericRights($Rule.FileSystemRights)
+            $mappedRight = Get-MappedGenericRight($Rule.FileSystemRights)
             $mappedRule = New-Object System.Security.AccessControl.FileSystemAccessRule($SID, $mappedRight, $Rule.InheritanceFlags, $Rule.PropagationFlags, $Rule.AccessControlType)
 
             try
@@ -643,7 +643,7 @@ Function Update-FileSystemRightsMapping
                 $ACE.RemoveAccessRule($Rule)
             }
             catch
-            {                
+            {
                 $sidRule = $ACE.AccessRuleFactory($SID, $Rule.FileSystemRights, $Rule.IsInherited , $Rule.InheritanceFlags, $Rule.PropagationFlags, $Rule.AccessControlType)
                 $ACE.RemoveAccessRule($sidRule)
             }
@@ -655,7 +655,7 @@ Function Update-FileSystemRightsMapping
     return $ACE
 }
 
-Function Get-MappedGenericRights
+Function Get-MappedGenericRight
 {
     param
     (

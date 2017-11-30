@@ -20,7 +20,7 @@ Function Get-TargetResource
     [OutputType([Hashtable])]
     param
     (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory=$true)]
         [System.String]
         $DistinguishedName,
 
@@ -98,7 +98,7 @@ Function Get-TargetResource
 
     $ReturnValue = @{
         Force = $Force
-        DistinguishedName = $Path
+        DistinguishedName = $DistinguishedName
         AccessControlList = $CimAccessControlList
     }
 
@@ -110,7 +110,7 @@ Function Set-TargetResource
     [CmdletBinding()]
     param
     (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory=$true)]
         [System.String]
         $DistinguishedName,
 
@@ -253,7 +253,7 @@ Function Test-TargetResource
     [OutputType([System.Boolean])]
     param
     (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory=$true)]
         [System.String]
         $DistinguishedName,
 
