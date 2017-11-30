@@ -643,7 +643,7 @@ Function Update-FileSystemRightsMapping
                 $ACE.RemoveAccessRule($Rule)
             }
             catch
-            {                
+            {
                 $sidRule = $ACE.AccessRuleFactory($SID, $Rule.FileSystemRights, $Rule.IsInherited , $Rule.InheritanceFlags, $Rule.PropagationFlags, $Rule.AccessControlType)
                 $ACE.RemoveAccessRule($sidRule)
             }
