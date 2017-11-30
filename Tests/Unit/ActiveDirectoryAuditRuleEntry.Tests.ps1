@@ -15,7 +15,7 @@ Import-Module "$($PSScriptRoot)\..\TestHelper.psm1" -Force
     Describe "$DSCResourceName\Get-TargetResource" {
 
         Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" } -ModuleName $DSCResourceName
-        Mock -CommandName Test-Path -MockWith { return $true }
+        Mock -CommandName Test-Path -MockWith { return $true } -ModuleName $DSCResourceName
         Mock -CommandName Assert-Module -MockWith {} -ModuleName $DSCResourceName
         Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'} -ModuleName $DSCResourceName
 
@@ -30,7 +30,7 @@ Import-Module "$($PSScriptRoot)\..\TestHelper.psm1" -Force
                 $collection.AddRule($auditRule2)
                 $acl = @{Audit = $collection}
                 return $acl
-            }
+            } -ModuleName $DSCResourceName
         
             $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $false -AuditFlags Success -ActiveDirectoryRights GenericAll -InheritanceType All -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
 
@@ -76,7 +76,7 @@ Import-Module "$($PSScriptRoot)\..\TestHelper.psm1" -Force
                 $collection = [System.Security.AccessControl.AuthorizationRuleCollection]::new()
                 $acl = @{Audit = $collection}
                 return $acl
-            }
+            } -ModuleName $DSCResourceName
         
             $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $false -AuditFlags Success -ActiveDirectoryRights GenericAll -InheritanceType All -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
             
@@ -127,7 +127,7 @@ Import-Module "$($PSScriptRoot)\..\TestHelper.psm1" -Force
             $collection.AddRule($auditRule3)
             $acl = @{Audit = $collection}
             return $acl
-        }
+        } -ModuleName $DSCResourceName
     
         Context "Permissions already exist with ForcePrincipal False" {
         
@@ -237,7 +237,7 @@ Import-Module "$($PSScriptRoot)\..\TestHelper.psm1" -Force
                 $collection.AddRule($auditRule)
                 $acl = @{Audit = $collection}
                 return $acl
-            }
+            } -ModuleName $DSCResourceName
     
             $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $false -AuditFlags Success -ActiveDirectoryRights Delete -InheritanceType SelfAndChildren -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
     
