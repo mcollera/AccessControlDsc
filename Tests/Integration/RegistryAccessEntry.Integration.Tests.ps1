@@ -1,9 +1,9 @@
-﻿#requires -Version 4.0 -Modules Pester
+#requires -Version 4.0 -Modules Pester
 #requires -RunAsAdministrator
 
 #region Set up for tests
-$Global:DSCModuleName   = 'AccessControlDSC'
-$Global:DSCResourceName = 'RegistryAccessEntry'
+$DSCModuleName   = 'AccessControlDSC'
+$DSCResourceName = 'RegistryAccessEntry'
 
 Import-Module "$($PSScriptRoot)\..\TestHelper.psm1" -Force
 Import-Module Pester -Force
@@ -21,8 +21,8 @@ if (
 Import-Module -Name (Join-Path -Path $ModuleRoot -ChildPath 'DSCResource.Tests\TestHelper.psm1') -Force
 
 $TestEnvironment = Initialize-TestEnvironment `
-    -DSCModuleName $Global:DSCModuleName `
-    -DSCResourceName $Global:DSCResourceName `
+    -DSCModuleName $DSCModuleName `
+    -DSCResourceName $DSCResourceName `
     -TestType Integration
 
 #endregion
@@ -30,14 +30,14 @@ $TestEnvironment = Initialize-TestEnvironment `
 
 try
 {
-    $ConfigFile = Join-Path -Path $PSScriptRoot -ChildPath "$($Global:DSCResourceName).Config.ps1"
+    $ConfigFile = Join-Path -Path $PSScriptRoot -ChildPath "$($DSCResourceName).Config.ps1"
     . $ConfigFile
 
     #Create a temporary file to hold the configuration
     $configPath = "C:\TestRegConfig"
     New-Item -Path $configPath -ItemType Directory
 
-    Describe "$($Global:DSCResourceName)_Integration" {
+    Describe "$($DSCResourceName)_Integration" {
 
         #Create temporary Registry Key
         $TestRegistryKey = Set-NewTempRegKeyAcl -Path $TestParameter.Path -PassThru
@@ -45,10 +45,10 @@ try
         $Acl.SetAccessRuleProtection($false, $false)
         Set-Acl -Path $TestParameter.Path -AclObject $Acl
 
-        $ConfigurationName = "$($Global:DSCResourceName)_Test"
+        $ConfigurationName = "$($DSCResourceName)_Test"
         It 'Should compile without throwing' {
             {
-                Invoke-Expression -Command ('{0} -OutputPath "{1}"' -f $ConfigurationName, $configPath)
+                & $ConfigurationName -OutputPath $ConfigPath
                 Start-DscConfiguration -Path $configPath -ComputerName localhost -Force -Verbose -Wait
             } | Should Not Throw
         }

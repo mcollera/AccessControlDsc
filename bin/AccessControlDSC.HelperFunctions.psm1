@@ -1,4 +1,4 @@
-﻿function Resolve-Identity
+function Resolve-Identity
 {
     <#
     .SYNOPSIS

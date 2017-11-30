@@ -1,25 +1,23 @@
 #requires -Version 4.0 -Modules Pester
-#requires -RunAsAdministrator
 
 #region Setup for tests
 
-$Global:DSCModuleName = 'AccessControlDsc'
-$Global:DSCResourceName = 'ActiveDirectoryAuditRuleEntry'
+$DSCResourceName = 'ActiveDirectoryAuditRuleEntry'
 
-Import-Module "$($PSScriptRoot)\..\..\DSCResources\$($Global:DSCResourceName)\$($Global:DSCResourceName).psm1" -Force
+Import-Module "$($PSScriptRoot)\..\..\DSCResources\$($DSCResourceName)\$($DSCResourceName).psm1" -Force
 Import-Module "$($PSScriptRoot)\..\..\DscResources\AccessControlResourceHelper\AccessControlResourceHelper.psm1" -Force
 Import-Module "$($PSScriptRoot)\..\TestHelper.psm1" -Force
-Import-Module Pester -Force
+
 #endregion
 
-InModuleScope ActiveDirectoryAuditRuleEntry {
+#InModuleScope ActiveDirectoryAuditRuleEntry {
+    $DSCResourceName = 'ActiveDirectoryAuditRuleEntry'
+    Describe "$DSCResourceName\Get-TargetResource" {
 
-    Describe "$Global:DSCResourceName\Get-TargetResource" {
-
-        Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" }
-        Mock -CommandName Test-Path -MockWith { return $true }
-        Mock -CommandName Assert-Module -MockWith {}
-        Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'}
+        Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" } -ModuleName $DSCResourceName
+        Mock -CommandName Test-Path -MockWith { return $true } -ModuleName $DSCResourceName
+        Mock -CommandName Assert-Module -MockWith {} -ModuleName $DSCResourceName
+        Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'} -ModuleName $DSCResourceName
 
         Context "Should return current Audit Rules" {
             Mock -CommandName Get-Acl -MockWith {
@@ -32,7 +30,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 $collection.AddRule($auditRule2)
                 $acl = @{Audit = $collection}
                 return $acl
-            }
+            } -ModuleName $DSCResourceName
         
             $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $false -AuditFlags Success -ActiveDirectoryRights GenericAll -InheritanceType All -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
 
@@ -41,7 +39,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 AccessControlList = $TempAcl
             }
 
-            $GetResult = & "$($Global:DSCResourceName)\Get-TargetResource" @ContextParams
+            $GetResult = & "$($DSCResourceName)\Get-TargetResource" @ContextParams
 
             It 'Should return Ensure set as empty' {
                 [string]::IsNullOrWhiteSpace($GetResult.AccessControlList.AccessControlEntry.Ensure) | Should Be $true
@@ -78,7 +76,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 $collection = [System.Security.AccessControl.AuthorizationRuleCollection]::new()
                 $acl = @{Audit = $collection}
                 return $acl
-            }
+            } -ModuleName $DSCResourceName
         
             $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $false -AuditFlags Success -ActiveDirectoryRights GenericAll -InheritanceType All -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
             
@@ -107,14 +105,14 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
         }
     }
 
-    Describe "$Global:DSCResourceName\Test-TargetResource" {
+    Describe "$DSCResourceName\Test-TargetResource" {
         
-        Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" }
-        Mock -CommandName Test-Path -MockWith { return $true }
-        Mock -CommandName Assert-Module -MockWith {}
-        Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'}
-        Mock -CommandName Get-SchemaIdGuid -MockWith { return [guid]"52ea1a9a-be7e-4213-9e69-5f28cb89b56a" }
-        Mock -CommandName Get-SchemaObjectName -MockWith { return "Pwd-Last-Set" }
+        Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" } -ModuleName $DSCResourceName
+        Mock -CommandName Test-Path -MockWith { return $true } -ModuleName $DSCResourceName
+        Mock -CommandName Assert-Module -MockWith {} -ModuleName $DSCResourceName
+        Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'}-ModuleName $DSCResourceName 
+        Mock -CommandName Get-SchemaIdGuid -MockWith { return [guid]"52ea1a9a-be7e-4213-9e69-5f28cb89b56a" } -ModuleName $DSCResourceName
+        Mock -CommandName Get-SchemaObjectName -MockWith { return "Pwd-Last-Set" } -ModuleName $DSCResourceName
 
         Mock -CommandName Get-Acl -MockWith {
             $collection = [System.Security.AccessControl.AuthorizationRuleCollection]::new()
@@ -129,7 +127,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
             $collection.AddRule($auditRule3)
             $acl = @{Audit = $collection}
             return $acl
-        }
+        } -ModuleName $DSCResourceName
     
         Context "Permissions already exist with ForcePrincipal False" {
         
@@ -140,7 +138,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 AccessControlList = $TempAcl
             }
     
-            $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
+            $TestResult = & "$($DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return true' {
                 $TestResult | Should Be $true        
@@ -156,7 +154,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 AccessControlList = $TempAcl
             }
 
-            $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
+            $TestResult = & "$($DSCResourceName)\Test-TargetResource" @ContextParams
 
             It 'Should return false' {
                 $TestResult | Should Be $false
@@ -172,7 +170,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 AccessControlList = $TempAcl        
             }
     
-            $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
+            $TestResult = & "$($DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return false' {
                 $TestResult | Should Be $false
@@ -188,7 +186,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 AccessControlList = $TempAcl
             }
     
-            $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
+            $TestResult = & "$($DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return false' {
                 $TestResult | Should Be $false
@@ -205,7 +203,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 AccessControlList = $TempAcl
             }
     
-            $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
+            $TestResult = & "$($DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return false' {        
                 $TestResult | Should Be $false
@@ -222,7 +220,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 AccessControlList = $TempAcl        
             }
     
-            $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
+            $TestResult = & "$($DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return false' {
                 $TestResult | Should Be $false
@@ -239,7 +237,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 $collection.AddRule($auditRule)
                 $acl = @{Audit = $collection}
                 return $acl
-            }
+            } -ModuleName $DSCResourceName
     
             $TempAcl =  New-AuditAccessControlList -Principal "Everyone" -ForcePrincipal $false -AuditFlags Success -ActiveDirectoryRights Delete -InheritanceType SelfAndChildren -InheritedObjectType "52ea1a9a-be7e-4213-9e69-5f28cb89b56a" -Ensure Present
     
@@ -249,7 +247,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 AccessControlList = $TempAcl
             }
     
-            $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
+            $TestResult = & "$($DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return true' {
                 $TestResult | Should Be $true
@@ -259,12 +257,12 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
 
     Describe "Helper Functions" {
 
-        Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" }
-        Mock -CommandName Test-Path -MockWith { return $true }
-        Mock -CommandName Assert-Module -MockWith {}
-        Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'}
-        Mock -CommandName Get-SchemaIdGuid -MockWith { return [guid]"52ea1a9a-be7e-4213-9e69-5f28cb89b56a" }
-        Mock -CommandName Get-SchemaObjectName -MockWith { return "Pwd-Last-Set" }
+        Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" } -ModuleName $DSCResourceName
+        Mock -CommandName Test-Path -MockWith { return $true } -ModuleName $DSCResourceName
+        Mock -CommandName Assert-Module -MockWith {} -ModuleName $DSCResourceName
+        Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'} -ModuleName $DSCResourceName
+        Mock -CommandName Get-SchemaIdGuid -MockWith { return [guid]"52ea1a9a-be7e-4213-9e69-5f28cb89b56a" } -ModuleName $DSCResourceName
+        Mock -CommandName Get-SchemaObjectName -MockWith { return "Pwd-Last-Set" } -ModuleName $DSCResourceName
 
         $Identity = Resolve-Identity -Identity "Everyone"
         $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
@@ -391,4 +389,4 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
             }
         }
     }        
-}
+#}
