@@ -3,18 +3,17 @@
 
 #region Setup for tests
 
-$Global:DSCModuleName = 'AccessControlDsc'
-$Global:DSCResourceName = 'ActiveDirectoryAuditRuleEntry'
+$DSCResourceName = 'ActiveDirectoryAuditRuleEntry'
 
-Import-Module "$($PSScriptRoot)\..\..\DSCResources\$($Global:DSCResourceName)\$($Global:DSCResourceName).psm1" -Force
+Import-Module "$($PSScriptRoot)\..\..\DSCResources\$($DSCResourceName)\$($DSCResourceName).psm1" -Force
 Import-Module "$($PSScriptRoot)\..\..\DscResources\AccessControlResourceHelper\AccessControlResourceHelper.psm1" -Force
 Import-Module "$($PSScriptRoot)\..\TestHelper.psm1" -Force
-Import-Module Pester -Force
+
 #endregion
 
 InModuleScope ActiveDirectoryAuditRuleEntry {
-
-    Describe "$Global:DSCResourceName\Get-TargetResource" {
+    $DSCResourceName = 'ActiveDirectoryAuditRuleEntry'
+    Describe "$DSCResourceName\Get-TargetResource" {
 
         Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" }
         Mock -CommandName Test-Path -MockWith { return $true }
@@ -41,7 +40,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 AccessControlList = $TempAcl
             }
 
-            $GetResult = & "$($Global:DSCResourceName)\Get-TargetResource" @ContextParams
+            $GetResult = & "$($DSCResourceName)\Get-TargetResource" @ContextParams
 
             It 'Should return Ensure set as empty' {
                 [string]::IsNullOrWhiteSpace($GetResult.AccessControlList.AccessControlEntry.Ensure) | Should Be $true
@@ -107,7 +106,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
         }
     }
 
-    Describe "$Global:DSCResourceName\Test-TargetResource" {
+    Describe "$DSCResourceName\Test-TargetResource" {
         
         Mock -CommandName Join-Path -MockWith { return "AD:\DC=PowerStig,DC=Local" }
         Mock -CommandName Test-Path -MockWith { return $true }
@@ -140,7 +139,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 AccessControlList = $TempAcl
             }
     
-            $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
+            $TestResult = & "$($DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return true' {
                 $TestResult | Should Be $true        
@@ -156,7 +155,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 AccessControlList = $TempAcl
             }
 
-            $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
+            $TestResult = & "$($DSCResourceName)\Test-TargetResource" @ContextParams
 
             It 'Should return false' {
                 $TestResult | Should Be $false
@@ -172,7 +171,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 AccessControlList = $TempAcl        
             }
     
-            $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
+            $TestResult = & "$($DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return false' {
                 $TestResult | Should Be $false
@@ -188,7 +187,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 AccessControlList = $TempAcl
             }
     
-            $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
+            $TestResult = & "$($DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return false' {
                 $TestResult | Should Be $false
@@ -205,7 +204,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 AccessControlList = $TempAcl
             }
     
-            $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
+            $TestResult = & "$($DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return false' {        
                 $TestResult | Should Be $false
@@ -222,7 +221,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 AccessControlList = $TempAcl        
             }
     
-            $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
+            $TestResult = & "$($DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return false' {
                 $TestResult | Should Be $false
@@ -249,7 +248,7 @@ InModuleScope ActiveDirectoryAuditRuleEntry {
                 AccessControlList = $TempAcl
             }
     
-            $TestResult = & "$($Global:DSCResourceName)\Test-TargetResource" @ContextParams
+            $TestResult = & "$($DSCResourceName)\Test-TargetResource" @ContextParams
     
             It 'Should return true' {
                 $TestResult | Should Be $true

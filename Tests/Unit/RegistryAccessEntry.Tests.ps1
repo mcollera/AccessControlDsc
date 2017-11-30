@@ -2,15 +2,14 @@
 #requires -RunAsAdministrator
 
 #region Setup for tests
-$Global:DSCModuleName = 'AccessControlDsc'
-$Global:DSCResourceName = 'RegistryAccessEntry'
+$DSCResourceName = 'RegistryAccessEntry'
 
-Import-Module "$($PSScriptRoot)\..\..\DSCResources\$($Global:DSCResourceName)\$($Global:DSCResourceName).psm1" -Force
+Import-Module "$($PSScriptRoot)\..\..\DSCResources\$($DSCResourceName)\$($DSCResourceName).psm1" -Force
 Import-Module "$($PSScriptRoot)\..\TestHelper.psm1" -Force
-Import-Module Pester -Force
+
 #endregion
 
-Describe "$Global:DSCResourceName\Get-TargetResource" {
+Describe "$DSCResourceName\Get-TargetResource" {
     Context "Permissions should exist" {
         $TempAcl = New-RegistryAccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -RegistryRights FullControl -Inheritance 'Key' -Ensure Absent 
         $pathName = "HKCU:\TestKey"
@@ -40,7 +39,7 @@ Describe "$Global:DSCResourceName\Get-TargetResource" {
         )
 
         Set-NewTempRegKeyAcl -Path $PathName -AccessRulesToAdd $TempAccessRules 
-        $GetResult = & "$($Global:DSCResourceName)\Get-TargetResource" @ContextParams
+        $GetResult = & "$($DSCResourceName)\Get-TargetResource" @ContextParams
 
         It 'Should return Ensure set as empty' {
             $GetResult.AccessControl.AccessControlEntry.Ensure | Should Be $null
@@ -103,7 +102,7 @@ Describe "$Global:DSCResourceName\Get-TargetResource" {
     }
 }
 
-Describe "$Global:DSCResourceName\Test-TargetResource behavior with Ensure set to Absent" {
+Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Absent" {
     Context 'AccessControlInformation is specified, no permissions exist' {
         $pathName = "HKCU:\TestKey"
         $TempAcl = New-RegistryAccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -RegistryRights FullControl -Inheritance 'Key' -Ensure Absent 
@@ -248,7 +247,7 @@ Describe "$Global:DSCResourceName\Test-TargetResource behavior with Ensure set t
     }
 }
 
-Describe "$Global:DSCResourceName\Test-TargetResource behavior with Ensure set to Present" {
+Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Present" {
     Context 'AccessControlInformation is specified, no permissions exist' {
         $pathName = "HKCU:\TestKey"
         $TempAcl = New-RegistryAccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -RegistryRights FullControl -Inheritance 'KeySubkeys' -Ensure Present 
@@ -437,7 +436,7 @@ Describe "$Global:DSCResourceName\Test-TargetResource behavior with Ensure set t
     }
 }
 
-Describe "$Global:DSCResourceName\Set-TargetResource behavior with Ensure set to Absent" {
+Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Absent" {
     Context 'AccessControlInformation is not specified' {
         $pathName = "HKCU:\TestKey"
         $TempAcl = New-RegistryAccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -Inheritance 'Key' -Ensure Absent 
@@ -745,7 +744,7 @@ Describe "$Global:DSCResourceName\Set-TargetResource behavior with Ensure set to
     }
 }
 
-Describe "$Global:DSCResourceName\Set-TargetResource behavior with Ensure set to Present" {
+Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Present" {
     Context 'AccessControlInformation is not specified' {
         $pathName = "HKCU:\TestKey"
         $TempAcl = New-RegistryAccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -Inheritance 'Key' -Ensure Present 
@@ -1060,31 +1059,31 @@ Describe "$Global:DSCResourceName\Set-TargetResource behavior with Ensure set to
     }
 }
 
-Describe "$Global:DSCResourceName\Get-RegistryRuleInheritenceFlags" {
+Describe "$DSCResourceName\Get-RegistryRuleInheritenceFlag" {
     Context "Inheritance Names" {
         It "Should return 0-0" {
-            $InheritanceFlags = Get-RegistryRuleInheritenceFlags -Inheritance "Key"
+            $InheritanceFlags = Get-RegistryRuleInheritenceFlag -Inheritance "Key"
 
             $InheritanceFlags.InheritanceFlag | Should be 0
             $InheritanceFlags.PropagationFlag | Should be 0
         }
 
         It "Should return 1-0" {
-            $InheritanceFlags = Get-RegistryRuleInheritenceFlags -Inheritance "KeySubkeys"
+            $InheritanceFlags = Get-RegistryRuleInheritenceFlag -Inheritance "KeySubkeys"
 
             $InheritanceFlags.InheritanceFlag | Should be 1
             $InheritanceFlags.PropagationFlag | Should be 0
         }
 
         It "Should return 1-2" {
-            $InheritanceFlags = Get-RegistryRuleInheritenceFlags -Inheritance "Subkeys"
+            $InheritanceFlags = Get-RegistryRuleInheritenceFlag -Inheritance "Subkeys"
 
             $InheritanceFlags.InheritanceFlag | Should be 1
             $InheritanceFlags.PropagationFlag | Should be 2
         }
 
         It "Should return null when abnormal Inheritance is passed" {
-            $InheritanceFlags = Get-RegistryRuleInheritenceFlags -Inheritance "The files are 'in' the computer."
+            $InheritanceFlags = Get-RegistryRuleInheritenceFlag -Inheritance "The files are 'in' the computer."
 
             $InheritanceFlags.InheritanceFlag | Should be $null
             $InheritanceFlags.PropagationFlag | Should be $null
@@ -1092,7 +1091,7 @@ Describe "$Global:DSCResourceName\Get-RegistryRuleInheritenceFlags" {
     }
 }
 
-Describe "$Global:DSCResourceName\Get-RegistryRuleInheritenceName" {
+Describe "$DSCResourceName\Get-RegistryRuleInheritenceName" {
     Context "Inheritance and Propagation Flags" {
         It "Should return Key" {
             $InheritanceName = Get-RegistryRuleInheritenceName -InheritanceFlag 0 -PropagationFlag 0
@@ -1120,7 +1119,7 @@ Describe "$Global:DSCResourceName\Get-RegistryRuleInheritenceName" {
     }
 }
 
-Describe "$Global:DSCResourceName\ConvertTo-RegistryAccessRule" {
+Describe "$DSCResourceName\ConvertTo-RegistryAccessRule" {
     Context "Should convert to a valid Registry Key Access Rule" {
         It "Should return a FilseSystemAccessRule Object" {
             $TempAcl = New-RegistryAccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -RegistryRights FullControl -Inheritance 'Key' -Ensure Absent 
@@ -1143,14 +1142,10 @@ Describe "$Global:DSCResourceName\ConvertTo-RegistryAccessRule" {
     }
 }
 
-Describe "$Global:DSCResourceName\Compare-RegistryRules" {
-    Context "Compare-RegistryRules with Ensure set to Absent with no matching rules" {
+Describe "$DSCResourceName\Compare-RegistryRule" {
+    Context "Compare-RegistryRule with Ensure set to Absent with no matching rules" {
         $pathName = "HKCU:\TestKey"
         $TempAcl = New-RegistryAccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -RegistryRights EnumerateSubKeys -Inheritance 'Key' -Ensure Absent 
-        $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl 
-        }
 
         $TempAccessRules = @(
             New-Object -TypeName System.Security.AccessControl.RegistryAccessRule `
@@ -1183,7 +1178,7 @@ Describe "$Global:DSCResourceName\Compare-RegistryRules" {
         $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
         It "Should not have any Rules to be removed" {
-            $testComparison = Compare-RegistryRules -Expected $ACLRules -Actual $actualAce
+            $testComparison = Compare-RegistryRule -Expected $ACLRules -Actual $actualAce
 
             $testComparison.ToBeRemoved.Rule.Count | Should be $actualAce.Count
             $testComparison.Absent | Should Be $null
@@ -1195,13 +1190,9 @@ Describe "$Global:DSCResourceName\Compare-RegistryRules" {
         }
     }
 
-    Context "Compare-NtfsRules with Ensure set to Absent with matching rules" {
+    Context "Compare-NtfsRule with Ensure set to Absent with matching rules" {
         $pathName = "HKCU:\TestKey"
         $TempAcl = New-RegistryAccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -RegistryRights Delete -Inheritance 'Key' -Ensure Absent 
-        $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl 
-        }
 
         $TempAccessRules = @(
             New-Object -TypeName System.Security.AccessControl.RegistryAccessRule `
@@ -1234,7 +1225,7 @@ Describe "$Global:DSCResourceName\Compare-RegistryRules" {
         $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
         It "Should have matching rule to be removed" {
-            $testComparison = Compare-RegistryRules -Expected $ACLRules -Actual $actualAce
+            $testComparison = Compare-RegistryRule -Expected $ACLRules -Actual $actualAce
 
             $testComparison.ToBeRemoved.Rule.Count | Should be ($actualAce.Count - $TempAcl.AccessControlEntry.Count) 
             $testComparison.Absent.Count | Should Be $TempAcl.AccessControlEntry.Count
@@ -1246,13 +1237,9 @@ Describe "$Global:DSCResourceName\Compare-RegistryRules" {
         }
     }
 
-    Context "Compare-NtfsRules with Ensure set to Present with no matching rules" {
+    Context "Compare-NtfsRule with Ensure set to Present with no matching rules" {
         $pathName = "HKCU:\TestKey"
         $TempAcl = New-RegistryAccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -RegistryRights CreateSubkey -Inheritance 'KeySubKeys' -Ensure Present 
-        $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl 
-        }
 
         $TempAccessRules = @(
             New-Object -TypeName System.Security.AccessControl.RegistryAccessRule `
@@ -1285,7 +1272,7 @@ Describe "$Global:DSCResourceName\Compare-RegistryRules" {
         $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
         It "Should have new rule to add" {
-            $testComparison = Compare-RegistryRules -Expected $ACLRules -Actual $actualAce 
+            $testComparison = Compare-RegistryRule -Expected $ACLRules -Actual $actualAce 
 
             $testComparison.ToBeRemoved.Rule.Count | Should be $TempAccessRules.Count
             $testComparison.Rules.Count | Should be $TempAcl.AccessControlEntry.Count
@@ -1297,13 +1284,9 @@ Describe "$Global:DSCResourceName\Compare-RegistryRules" {
         }
     }
 
-    Context "Compare-NtfsRules with matching rules and Ensure set to Present" { 
+    Context "Compare-NtfsRule with matching rules and Ensure set to Present" { 
         $pathName = "HKCU:\TestKey"
         $TempAcl = New-RegistryAccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -RegistryRights Delete -Inheritance 'Key' -Ensure Present 
-        $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl 
-        }
 
         $TempAccessRules = @(
             New-Object -TypeName System.Security.AccessControl.RegistryAccessRule `
@@ -1336,7 +1319,7 @@ Describe "$Global:DSCResourceName\Compare-RegistryRules" {
         $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
         It "Should return matching rules" {
-            $testComparison = Compare-RegistryRules -Expected $ACLRules -Actual $actualAce
+            $testComparison = Compare-RegistryRule -Expected $ACLRules -Actual $actualAce
 
             $testComparison.ToBeRemoved.Rule.Count | Should be ($TempAccessRules.Count - $TempAcl.AccessControlEntry.Count)
             $testComparison.Rules.Count | Should be $TempAcl.AccessControlEntry.Count
@@ -1350,7 +1333,7 @@ Describe "$Global:DSCResourceName\Compare-RegistryRules" {
     }
 }
 
-Describe "$Global:DSCResourceName\ResourceHelper\Resolve-Identity" {
+Describe "$DSCResourceName\ResourceHelper\Resolve-Identity" {
     Context "Resolve Username" {
         It "Should resolve when input is a username" {
             $Identity = Resolve-Identity -Identity "Local"
@@ -1376,7 +1359,7 @@ Describe "$Global:DSCResourceName\ResourceHelper\Resolve-Identity" {
     }
 }
 
-Describe "$Global:DSCResourceName\ResourceHelper\ConvertTo-SID" {
+Describe "$DSCResourceName\ResourceHelper\ConvertTo-SID" {
     Context "Identity will contain a '\' e.g. BUILTIN\Users" {
         It "Should return a proper SID" {
             $SID = ConvertTo-SID -IdentityReference "BUILTIN\Users"

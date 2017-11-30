@@ -2,8 +2,8 @@
 #requires -RunAsAdministrator
 
 #region Set up for tests
-$Global:DSCModuleName   = 'AccessControlDSC'
-$Global:DSCResourceName = 'NTFSAccessEntry'
+$DSCModuleName   = 'AccessControlDSC'
+$DSCResourceName = 'NTFSAccessEntry'
 
 $ModuleRoot = Split-Path -Path $Script:MyInvocation.MyCommand.Path -Parent | Split-Path -Parent | Split-Path -Parent
 
@@ -18,8 +18,8 @@ if (
 Import-Module -Name (Join-Path -Path $ModuleRoot -ChildPath 'DSCResource.Tests\TestHelper.psm1') -Force
 
 $TestEnvironment = Initialize-TestEnvironment `
-    -DSCModuleName $Global:DSCModuleName `
-    -DSCResourceName $Global:DSCResourceName `
+    -DSCModuleName $DSCModuleName `
+    -DSCResourceName $DSCResourceName `
     -TestType Integration
 
 #endregion
@@ -27,7 +27,7 @@ $TestEnvironment = Initialize-TestEnvironment `
 
 try
 {
-    $ConfigFile = Join-Path -Path $PSScriptRoot -ChildPath "$($Global:DSCResourceName).Config.ps1"
+    $ConfigFile = Join-Path -Path $PSScriptRoot -ChildPath "$($DSCResourceName).Config.ps1"
     . $ConfigFile
 
     #Create temporary directory
@@ -37,13 +37,13 @@ try
     $Acl.Access.Where({-not $_.IsInherited}).ForEach({[Void]$Acl.RemoveAccessRule($_)})
     [System.IO.Directory]::SetAccessControl($TestDirectory.FullName, $Acl)
 
-    Describe "$($Global:DSCResourceName)_Integration" {
+    Describe "$($DSCResourceName)_Integration" {
 
-        $ConfigurationName = "$($Global:DSCResourceName)_Test"
+        $ConfigurationName = "$($DSCResourceName)_Test"
 
         It 'Should compile without throwing' {
             {
-                Invoke-Expression -Command ('{0} -OutputPath "{1}"' -f $ConfigurationName, $TestParameter.Path)
+                & $ConfigurationName $TestParameter.Path
                 Start-DscConfiguration -Path $TestParameter.Path -ComputerName localhost -Force -Verbose -Wait
             } | Should Not Throw
         }

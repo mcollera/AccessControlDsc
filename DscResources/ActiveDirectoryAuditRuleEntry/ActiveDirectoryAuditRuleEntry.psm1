@@ -20,7 +20,7 @@ Function Get-TargetResource
     [OutputType([Hashtable])]
     param
     (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory=$true)]
         [System.String]
         $DistinguishedName,
 
@@ -28,7 +28,7 @@ Function Get-TargetResource
         [Microsoft.Management.Infrastructure.CimInstance[]]
         $AccessControlList,
 
-        [Parameter()]
+        [Parameter(Mandatory=$false)]
         [bool]
         $Force = $false
     )
@@ -110,7 +110,7 @@ Function Set-TargetResource
     [CmdletBinding()]
     param
     (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory=$true)]
         [System.String]
         $DistinguishedName,
 
@@ -118,7 +118,7 @@ Function Set-TargetResource
         [Microsoft.Management.Infrastructure.CimInstance[]]
         $AccessControlList,
 
-        [Parameter()]
+        [Parameter(Mandatory=$false)]
         [bool]
         $Force = $false
     )
@@ -253,7 +253,7 @@ Function Test-TargetResource
     [OutputType([System.Boolean])]
     param
     (
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory=$true)]
         [System.String]
         $DistinguishedName,
 
@@ -261,7 +261,7 @@ Function Test-TargetResource
         [Microsoft.Management.Infrastructure.CimInstance[]]
         $AccessControlList,
 
-        [Parameter()]
+        [Parameter(Mandatory=$false)]
         [bool]
         $Force = $false
     )
