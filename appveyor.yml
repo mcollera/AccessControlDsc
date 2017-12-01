@@ -1,7 +1,7 @@
 #---------------------------------# 
 #      environment configuration  # 
 #---------------------------------# 
-version: 1.1.{build}.0
+version: 1.0.{build}.0
 install:
     - git clone https://github.com/PowerShell/DscResource.Tests
     - ps: |
@@ -31,43 +31,10 @@ test_script:
 #---------------------------------# 
 #      deployment configuration   # 
 #---------------------------------# 
-deploy:
-- provider: NuGet
-  server: https://www.powershellgallery.com/api/v2/
-  api_key:
-    secure: xshObWBpV6ZqLVAj9MtMppDPjHum8oiHY874aC4+KTp1HE6BUVcI7nrHkm5H4NaO
-  on:
-    branch: master
-- provider: GitHub
-  auth_token:
-    secure: HK4IZqx5rQtJgCghgc3C8SJIE2JxkZ+o5C04j3itP7kp1bJp6hscVLgEO4KTCYWW
-  on:
-    branch: master
-# scripts to run before deployment 
 deploy_script: 
   - ps: |
-      # Creating project artifact
-      $stagingDirectory = (Resolve-Path ..).Path
-      $manifest = Join-Path $pwd "AccessControlDsc.psd1" 
-      (Get-Content $manifest -Raw).Replace("1.1.0.0", $env:APPVEYOR_BUILD_VERSION) | Out-File $manifest 
-      $zipFilePath = Join-Path $stagingDirectory "$(Split-Path $pwd -Leaf).zip"
-      Add-Type -assemblyname System.IO.Compression.FileSystem
-      [System.IO.Compression.ZipFile]::CreateFromDirectory($pwd, $zipFilePath)
-      
-      # Creating NuGet package artifact
-      New-Nuspec -packageName $env:APPVEYOR_PROJECT_NAME -version $env:APPVEYOR_BUILD_VERSION -author "Microsoft" -owners "Microsoft" -licenseUrl "https://github.com/PowerShell/DscResources/blob/master/LICENSE" -projectUrl "https://github.com/$($env:APPVEYOR_REPO_NAME)" -packageDescription $env:APPVEYOR_PROJECT_NAME -tags "DesiredStateConfiguration DSC DSCResourceKit" -destinationPath .
-      nuget pack ".\$($env:APPVEYOR_PROJECT_NAME).nuspec" -outputdirectory .
-      $nuGetPackageName = $env:APPVEYOR_PROJECT_NAME + "." + $env:APPVEYOR_BUILD_VERSION + ".nupkg"
-      $nuGetPackagePath = (Get-ChildItem $nuGetPackageName).FullName
-      
-      @(
-          # You can add other artifacts here
-          $zipFilePath,
-          $nuGetPackagePath
-      ) | % { 
-          Write-Host "Pushing package $_ as Appveyor artifact"
-          Push-AppveyorArtifact $_
-        }
+      Invoke-AppveyorAfterTestTask `
+            -ResourceModuleName $moduleName
         
         
 
