@@ -21,11 +21,11 @@ Please check out common DSC Resources [contributing guidelines](
 
 ## Resources
 
-* **[ActiveDirectoryAuditRule](#ActiveDirectoryAuditRule):** Provides the ability to manage audit access for Active Directory object SACL.
+* [**ActiveDirectoryAuditRule**](#activedirectoryauditrule): Provides the ability to manage audit access for Active Directory object SACL.
 
-* **[NtfsAccessEntry](#NtfsAccessEntry):** Provides the ability to manage access entries for NTFS files and directories.
+* [**NtfsAccessEntry**](#ntfsaccessentry): Provides the ability to manage access entries for NTFS files and directories.
 
-* **[RegistryAccessEntry](#RegistryAccessEntry):** Provides the ability to manage access entries for Registry objects.
+* [**RegistryAccessEntry**](#registryaccessentry): Provides the ability to manage access entries for Registry objects.
 
 ### **ActiveDirectoryAuditRule**
 
@@ -54,7 +54,7 @@ Please check out common DSC Resources [contributing guidelines](
 #### ActiveDirectoryAuditRule Examples
 
 * [Set Active Directory OU audit access rules](
-  https://github.com/PowerShell/AccessControlDsc/blob/master/Examples/ActiveDirectoryAuditRuleEntry_example.ps1)
+  https://github.com/mcollera/AccessControlDsc/blob/master/Examples/ActiveDirectoryAuditRuleEntry_example.ps1)
 
 ### **NtfsAccessEntry**
 
@@ -81,7 +81,7 @@ Please check out common DSC Resources [contributing guidelines](
 #### NtfsAccessEntry Examples
 
 * [Set access entries for NTFS folders](
-  https://github.com/PowerShell/AccessControlDsc/blob/master/Examples/NtfsAccessEntry_example.ps1)
+  https://github.com/mcollera/AccessControlDsc/blob/master/Examples/NtfsAccessEntry_example.ps1)
 
 ### **RegistryAccessEntry**
 
@@ -108,7 +108,7 @@ Please check out common DSC Resources [contributing guidelines](
 #### RegistryAccessEntry Examples
 
 * [Configure access entries for registry key](
-  https://github.com/PowerShell/AccessControlDsc/blob/master/Examples/RegistryAccessEntry_example.ps1)
+  https://github.com/mcollera/AccessControlDsc/blob/master/Examples/RegistryAccessEntry_example.ps1)
 
 ## Versions
 
