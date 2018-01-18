@@ -51,28 +51,32 @@ Function Get-TargetResource
                 $cimAccessControlEntry = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
 
                 $principalName = $principal.Principal
-                $ForcePrincipal = $principal.ForcePrincipal
+                $forcePrincipal = $principal.ForcePrincipal
 
                 $identity = Resolve-Identity -Identity $principalName
                 $currentPrincipalAccess = $currentAcl.Access.Where({$_.IdentityReference -eq $identity.Name})
 
-                foreach($Access in $currentPrincipalAccess)
+                foreach($access in $currentPrincipalAccess)
                 {
-                    $ActiveDirectoryRights = $Access.ActiveDirectoryRights.ToString().Split(',').Trim()
-                    $InheritanceType = $Access.InheritanceType.ToString()
-                    $inheritedObjectType = $Access.InheritedObjectType.ToString()
+                    $accessControlType = $access.AccessControlType.ToString()
+                    $activeDirectoryRights = $access.ActiveDirectoryRights.ToString().Split(',').Trim()
+                    $inheritanceType = $access.InheritanceType.ToString()
+                    $inheritedObjectType = $access.InheritedObjectType.ToString()
+                    $objectType = $access.ObjectType.ToString()
 
                     $cimAccessControlEntry += New-CimInstance -ClientOnly -Namespace $namespace -ClassName ActiveDirectoryAccessRule -Property @{
-                                ActiveDirectoryRights = @($ActiveDirectoryRights)
-                                InheritanceType = $InheritanceType
+                                AccessControlType = $accessControlType
+                                ActiveDirectoryRights = @($activeDirectoryRights)
+                                InheritanceType = $inheritanceType
                                 InheritedObjectType = $inheritedObjectType
+                                ObjectType = $objectType
                                 Ensure = ""
                             }
                 }
 
-                $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $namespace -ClassName ActiveDirectorySystemAccessControlList -Property @{
+                $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $namespace -ClassName ActiveDirectoryAccessControlList -Property @{
                                 Principal = $principalName
-                                ForcePrincipal = $ForcePrincipal
+                                ForcePrincipal = $forcePrincipal
                                 AccessControlEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($cimAccessControlEntry)
                             }
             }
@@ -90,7 +94,6 @@ Function Get-TargetResource
     }
 
     $ReturnValue = @{
-        Force = $Force
         DistinguishedName = $DistinguishedName
         AccessControlList = $CimAccessControlList
     }
@@ -185,7 +188,8 @@ Function Set-TargetResource
                     ("> ActiveDirectoryRights : '{0}'" -f $nonMatch.ActiveDirectoryRights),
                     ("> AccessControlType     : '{0}'" -f $nonMatch.AccessControlType),
                     ("> InheritanceType       : '{0}'" -f $nonMatch.InheritanceType),
-                    ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)) |
+                    ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)),
+                    ("> ObjectType            : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.ObjectType)) |
                     Write-Verbose
 
                     $currentAcl.AddAccessRule($rule.Rule)
@@ -201,8 +205,9 @@ Function Set-TargetResource
                 ("> ActiveDirectoryRights : '{0}'" -f $nonMatch.ActiveDirectoryRights),
                 ("> AccessControlType     : '{0}'" -f $nonMatch.AccessControlType),
                 ("> InheritanceType       : '{0}'" -f $nonMatch.InheritanceType),
-                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)) |
-                Write-Verbose
+                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)),
+                ("> ObjectType            : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.ObjectType)) |
+            Write-Verbose
 
                 $currentAcl.RemoveAccessRule($rule)
             }
@@ -216,8 +221,9 @@ Function Set-TargetResource
                 ("> ActiveDirectoryRights : '{0}'" -f $nonMatch.ActiveDirectoryRights),
                 ("> AccessControlType     : '{0}'" -f $nonMatch.AccessControlType),
                 ("> InheritanceType       : '{0}'" -f $nonMatch.InheritanceType),
-                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)) |
-                Write-Verbose
+                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)),
+                ("> ObjectType            : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.ObjectType)) |
+            Write-Verbose
                 $currentAcl.RemoveAccessRule($rule)
             }
 
@@ -263,48 +269,26 @@ Function Test-TargetResource
 
         if($null -ne $currentAcl)
         {
-            if($Force)
+            foreach($accessControlItem in $AccessControlList)
             {
-                foreach($accessControlItem in $AccessControlList)
-                {
-                    $principal = $accessControlItem.Principal
-                    $identity = Resolve-Identity -Identity $principal
-                    $identityRef = New-Object System.Security.Principal.NTAccount($identity.Name)
+                $principal = $accessControlItem.Principal
+                $identity = Resolve-Identity -Identity $principal
+                $identityRef = New-Object System.Security.Principal.NTAccount($identity.Name)
 
-                    $aclRules += ConvertTo-ActiveDirectoryAccessRule -AccessControlList $accessControlItem -IdentityRef $identityRef
-                }    
-        
-                $actualAce = $currentAcl.Access
+                $aclRules = ConvertTo-ActiveDirectoryAccessRule -AccessControlList $accessControlItem -IdentityRef $identityRef
+
+                $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $identity.Name})
 
                 $results = Compare-ActiveDirectoryAccessRule -Expected $aclRules -Actual $actualAce
 
-                $expected = $results.Rules
-                $absentToBeRemoved = $results.Absent
-                $toBeRemoved = $results.ToBeRemoved
-            }
-            else
-            {
-                foreach($accessControlItem in $AccessControlList)
+                $expected += $results.Rules
+                $absentToBeRemoved += $results.Absent
+
+                if($accessControlItem.ForcePrincipal)
                 {
-                    $principal = $accessControlItem.Principal
-                    $identity = Resolve-Identity -Identity $principal
-                    $identityRef = New-Object System.Security.Principal.NTAccount($identity.Name)
-
-                    $aclRules = ConvertTo-ActiveDirectoryAccessRule -AccessControlList $accessControlItem -IdentityRef $identityRef
-
-                    $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $identity.Name})
-
-                    $results = Compare-ActiveDirectoryAccessRule -Expected $aclRules -Actual $actualAce
-
-                    $expected += $results.Rules
-                    $absentToBeRemoved += $results.Absent
-
-                    if($accessControlItem.ForcePrincipal)
-                    {
-                        $toBeRemoved += $results.ToBeRemoved
-                    }
-
+                    $toBeRemoved += $results.ToBeRemoved
                 }
+
             }
 
             foreach($rule in $expected)
@@ -319,7 +303,8 @@ Function Test-TargetResource
                     ("> ActiveDirectoryRights : '{0}'" -f $nonMatch.ActiveDirectoryRights),
                     ("> AccessControlType     : '{0}'" -f $nonMatch.AccessControlType),
                     ("> InheritanceType       : '{0}'" -f $nonMatch.InheritanceType),
-                    ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)) |
+                    ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)),
+                    ("> ObjectType            : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.ObjectType)) |
                     Write-Verbose
 
                     $inDesiredState = $False
@@ -336,9 +321,9 @@ Function Test-TargetResource
                 ("> ActiveDirectoryRights : '{0}'" -f $nonMatch.ActiveDirectoryRights),
                 ("> AccessControlType     : '{0}'" -f $nonMatch.AccessControlType),
                 ("> InheritanceType       : '{0}'" -f $nonMatch.InheritanceType),
-                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType))|
+                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)),
+                ("> ObjectType            : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.ObjectType)) |
                 Write-Verbose
-
                 $inDesiredState = $False
             }
 
@@ -352,7 +337,8 @@ Function Test-TargetResource
                 ("> ActiveDirectoryRights : '{0}'" -f $nonMatch.ActiveDirectoryRights),
                 ("> AccessControlType     : '{0}'" -f $nonMatch.AccessControlType),
                 ("> InheritanceType       : '{0}'" -f $nonMatch.InheritanceType),
-                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)) |
+                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)),
+                ("> ObjectType            : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.ObjectType)) |
                 Write-Verbose
                 $inDesiredState = $False
             }
@@ -392,8 +378,9 @@ Function ConvertTo-ActiveDirectoryAccessRule
     foreach($ace in $AccessControlList.AccessControlEntry)
     {
         $inheritedObjectType = Get-SchemaIdGuid -ObjectName $ace.InheritedObjectType
+        $objectType = Get-SchemaIdGuid -ObjectName $ace.ObjectType
         $rule = [PSCustomObject]@{
-            Rules = New-Object System.DirectoryServices.ActiveDirectoryAccessRule($IdentityRef, $ace.ActiveDirectoryRights, $ace.AccessControlType, $ace.InheritanceType, $inheritedObjectType)
+            Rules = New-Object System.DirectoryServices.ActiveDirectoryAccessRule($IdentityRef, $ace.ActiveDirectoryRights, $ace.AccessControlType, $objectType, $ace.InheritanceType, $inheritedObjectType)
             Ensure = $ace.Ensure
         }
         $referenceObject += $rule
@@ -428,6 +415,7 @@ Function Compare-ActiveDirectoryAccessRule
             $_.AccessControlType -eq $referenceObject.AccessControlType -and
             $_.InheritanceType -eq $referenceObject.InheritanceType -and
             $_.InheritedObjectType -eq $referenceObject.InheritedObjectType -and
+            $_.ObjectType -eq $referenceObject.ObjectType -and
             $_.IdentityReference -eq $referenceObject.IdentityReference
         })
         if($match.Count -ge 1)
@@ -453,6 +441,7 @@ Function Compare-ActiveDirectoryAccessRule
             $_.AccessControlType -eq $referenceObject.AccessControlType -and
             $_.InheritanceType -eq $referenceObject.InheritanceType -and
             $_.InheritedObjectType -eq $referenceObject.InheritedObjectType -and
+            $_.ObjectType -eq $referenceObject.ObjectType -and
             $_.IdentityReference -eq $referenceObject.IdentityReference
         })
         if($match.Count -gt 0)
@@ -470,6 +459,7 @@ Function Compare-ActiveDirectoryAccessRule
             $_.AccessControlType -eq $referenceObject.AccessControlType -and
             $_.InheritanceType -eq $referenceObject.InheritanceType -and
             $_.InheritedObjectType -eq $referenceObject.InheritedObjectType -and
+            $_.ObjectType -eq $referenceObject.ObjectType -and
             $_.IdentityReference -eq $referenceObject.IdentityReference
         })
         if($match.Count -eq 0)
