@@ -432,3 +432,101 @@ function New-AuditAccessControlList
     }
     Return $CimAccessControlList
 }
+
+<#
+    .SYNOPSIS
+    Creates an Access Control List Ciminstance
+
+    .PARAMETER Principal
+    Name of the principal which access rights are being managed 
+
+    .PARAMETER ForcePrincipal
+        Used to force the desired access rule
+
+    .PARAMETER AccessControlType
+    States if the principal should be will be allowed or denied access
+
+    .PARAMETER ActiveDirectoryRights
+    What rights the principal is being given over an object
+
+    .PARAMETER Inheritance
+    The inheritance properties of the object being managed
+
+    .PARAMETER InheritedObjectType
+    The object type the inheritance property applies to
+
+    .PARAMETER ObjectType
+    The object type the ActiveDirectoryRights applies to
+
+    .PARAMETER Ensure
+    Either Present or Absent
+#>
+
+function New-ActiveDirectoryAccessControlList
+{
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        $Principal,
+
+        [Parameter(Mandatory = $true)]
+        [boolean]
+        $ForcePrincipal,
+
+        [Parameter()]
+        [ValidateSet("Allow","Deny")]
+        [string]
+        $AccessControlType,
+
+        [Parameter()]
+        [ValidateSet("AccessSystemSecurity","CreateChild","Delete","DeleteChild","DeleteTree","ExtendedRight","GenericAll","GenericExecute","GenericRead","GenericWrite","ListChildren","ListObject","ReadControl","ReadProperty","Self","WriteDacl","WriteOwner","WriteProperty")]
+        $ActiveDirectoryRights,
+
+        [Parameter()]
+        [ValidateSet("All","Children","Descendents","None","SelfAndChildren")]
+        [String]
+        $InheritanceType,
+
+        [Parameter()]
+        [string]
+        $InheritedObjectType,
+
+        [Parameter()]
+        [string]
+        $ObjectType,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("Absent", "Present")]
+        $Ensure
+    )
+
+    $NameSpace = "root/Microsoft/Windows/DesiredStateConfiguration"
+    $CimAccessControlList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
+    $CimAccessControlEntry = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
+
+    if ($null -eq $ActiveDirectoryRights)
+    {
+        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectoryAccessControlList -Property @{
+                                Principal = $Principal
+                                ForcePrincipal = $ForcePrincipal
+                            }
+    }
+    else
+    {
+        $CimAccessControlEntry += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectoryAccessRule -Property @{
+                                AccessControlType = $AccessControlType
+                                ActiveDirectoryRights = @($ActiveDirectoryRights)
+                                InheritanceType = $InheritanceType
+                                InheritedObjectType = $InheritedObjectType
+                                ObjectType = $ObjectType
+                                Ensure = $Ensure
+                            }
+
+        $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectoryAccessControlList -Property @{
+                            Principal = $Principal
+                            ForcePrincipal = $ForcePrincipal
+                            AccessControlEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($CimAccessControlEntry)
+                        }
+    }
+    Return $CimAccessControlList
+}

@@ -118,3 +118,54 @@ function ConvertTo-SID
     }
     
 }
+
+function Assert-Module
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter()] [ValidateNotNullOrEmpty()]
+        [System.String]
+        $ModuleName
+    )
+
+    if (-not (Get-Module -Name $ModuleName -ListAvailable))
+    {
+        $errorId = '{0}_ModuleNotFound' -f $ModuleName;
+        $errorMessage = $localizedString.RoleNotFoundError -f $ModuleName;
+        ThrowInvalidOperationError -ErrorId $errorId -ErrorMessage $errorMessage;
+    }
+} 
+
+Function Get-SchemaIdGuid
+{
+    Param 
+    (
+        [Parameter()]
+        [string]
+        $ObjectName
+    )
+
+    if($ObjectName)
+    {
+        $value = Get-ADObject -filter {name -eq $ObjectName} -SearchBase (Get-ADRootDSE).schemaNamingContext -prop schemaIDGUID
+        return [system.guid]$value.schemaIDGUID 
+    }
+    else
+    {
+        return [system.guid]"00000000-0000-0000-0000-000000000000"
+    }
+}
+
+Function Get-SchemaObjectName
+{
+    Param 
+    (
+        [Parameter()]
+        [guid]
+        $SchemaIdGuid
+    )
+
+        $value = Get-ADObject -filter {schemaIDGUID  -eq $SchemaIdGuid} -SearchBase (Get-ADRootDSE).schemaNamingContext -prop schemaIDGUID
+        return $value.name 
+}

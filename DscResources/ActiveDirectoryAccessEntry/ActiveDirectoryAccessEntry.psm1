@@ -30,7 +30,7 @@ Function Get-TargetResource
     )
     
     Assert-Module -ModuleName 'ActiveDirectory'
-    Import-Module -Name 'ActiveDirectory' -Verbose:$false
+    Import-Module -Name 'ActiveDirectory' -Verbose:$false -force
     
     $namespace = "root/Microsoft/Windows/DesiredStateConfiguration"
     $cimAccessControlList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
@@ -39,7 +39,7 @@ Function Get-TargetResource
 
     if(Test-Path -Path $path)
     {
-        $currentAcl = Get-Acl -Path $path -ErrorAction Stop
+        $currentAcl = Get-Acl -Path $path
 
         if($null -ne $currentAcl)
         {
@@ -116,7 +116,7 @@ Function Set-TargetResource
     )
  
     Assert-Module -ModuleName 'ActiveDirectory'
-    Import-Module -Name 'ActiveDirectory' -Verbose:$false
+    Import-Module -Name 'ActiveDirectory' -Verbose:$false -force
  
     $path = Join-Path -Path "ad:\" -ChildPath $DistinguishedName
     
@@ -125,45 +125,23 @@ Function Set-TargetResource
         $currentAcl = Get-Acl -Path $path
         if($null -ne $currentAcl)
         {
-            if($Force)
+            foreach($accessControlItem in $AccessControlList)
             {
-                foreach($accessControlItem in $AccessControlList)
-                {
-                    $principal = $accessControlItem.Principal
-                    $identity = Resolve-Identity -Identity $principal
-                    $identityRef = New-Object System.Security.Principal.NTAccount($identity.Name)
+                $principal = $accessControlItem.Principal
+                $identity = Resolve-Identity -Identity $principal
+                $identityRef = New-Object System.Security.Principal.NTAccount($identity.Name)
 
-                    $aclRules += ConvertTo-ActiveDirectoryAccessRule -AccessControlList $accessControlItem -IdentityRef $identityRef
-                }    
-        
-                $actualAce = $currentAcl.Access
+                $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $identity.Name})
 
+                $aclRules = ConvertTo-ActiveDirectoryAccessRule -AccessControlList $accessControlItem -IdentityRef $identityRef
                 $results = Compare-ActiveDirectoryAccessRule -Expected $aclRules -Actual $actualAce
 
-                $expected = $results.Rules
-                $absentToBeRemoved = $results.Absent
-                $toBeRemoved = $results.ToBeRemoved
-            }
-            else
-            {
-                foreach($accessControlItem in $AccessControlList)
+                $expected += $results.Rules
+                $absentToBeRemoved += $results.Absent
+
+                if($accessControlItem.ForcePrinciPal)
                 {
-                    $principal = $accessControlItem.Principal
-                    $identity = Resolve-Identity -Identity $principal
-                    $identityRef = New-Object System.Security.Principal.NTAccount($identity.Name)
-
-                    $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $identity.Name})
-
-                    $aclRules = ConvertTo-ActiveDirectoryAccessRule -AccessControlList $accessControlItem -IdentityRef $identityRef
-                    $results = Compare-ActiveDirectoryAccessRule -Expected $aclRules -Actual $actualAce
-
-                    $expected += $results.Rules
-                    $absentToBeRemoved += $results.Absent
-
-                    if($accessControlItem.ForcePrinciPal)
-                    {
-                        $toBeRemoved += $results.ToBeRemoved
-                    }
+                    $toBeRemoved += $results.ToBeRemoved
                 }
             }
 
@@ -196,7 +174,7 @@ Function Set-TargetResource
                 }
             }
 
-            foreach($rule in $absentToBeRemoved.Rule)
+            foreach($rule in $absentToBeRemoved)
             {
                 $nonMatch = $rule.Rule
                 ("Removing Access rule:"),
@@ -207,12 +185,12 @@ Function Set-TargetResource
                 ("> InheritanceType       : '{0}'" -f $nonMatch.InheritanceType),
                 ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)),
                 ("> ObjectType            : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.ObjectType)) |
-            Write-Verbose
+                Write-Verbose
 
-                $currentAcl.RemoveAccessRule($rule)
+                $currentAcl.RemoveAccessRule($rule.Rule)
             }
 
-            foreach($rule in $toBeRemoved.Rule)
+            foreach($rule in $toBeRemoved)
             {
                 $nonMatch = $rule.Rule
                 ("Removing Access rule:"),
@@ -223,8 +201,8 @@ Function Set-TargetResource
                 ("> InheritanceType       : '{0}'" -f $nonMatch.InheritanceType),
                 ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)),
                 ("> ObjectType            : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.ObjectType)) |
-            Write-Verbose
-                $currentAcl.RemoveAccessRule($rule)
+                Write-Verbose
+                $currentAcl.RemoveAccessRule($rule.Rule)
             }
 
             Set-Acl -Path $path -AclObject $currentAcl
@@ -258,7 +236,7 @@ Function Test-TargetResource
     )
 
     Assert-Module -ModuleName 'ActiveDirectory'
-    Import-Module -Name 'ActiveDirectory' -Verbose:$false
+    Import-Module -Name 'ActiveDirectory' -Verbose:$false -force
 
     $inDesiredState = $True
     $path = Join-Path -Path "ad:\" -ChildPath $DistinguishedName
@@ -313,34 +291,40 @@ Function Test-TargetResource
 
             if($absentToBeRemoved.Count -gt 0)
             {
-                $nonMatch = $rule.Rule
-                ("Found [absent] Access rule:"),
-                ("> Principal             : '{0}'" -f $principal),
-                ("> Path                  : '{0}'" -f $path),
-                ("> IdentityReference     : '{0}'" -f $nonMatch.IdentityReference),
-                ("> ActiveDirectoryRights : '{0}'" -f $nonMatch.ActiveDirectoryRights),
-                ("> AccessControlType     : '{0}'" -f $nonMatch.AccessControlType),
-                ("> InheritanceType       : '{0}'" -f $nonMatch.InheritanceType),
-                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)),
-                ("> ObjectType            : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.ObjectType)) |
-                Write-Verbose
-                $inDesiredState = $False
+                foreach($rule in $absentToBeRemoved)
+                {
+                    $nonMatch = $rule.Rule
+                    ("Found [absent] Access rule:"),
+                    ("> Principal             : '{0}'" -f $principal),
+                    ("> Path                  : '{0}'" -f $path),
+                    ("> IdentityReference     : '{0}'" -f $nonMatch.IdentityReference),
+                    ("> ActiveDirectoryRights : '{0}'" -f $nonMatch.ActiveDirectoryRights),
+                    ("> AccessControlType     : '{0}'" -f $nonMatch.AccessControlType),
+                    ("> InheritanceType       : '{0}'" -f $nonMatch.InheritanceType),
+                    ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)),
+                    ("> ObjectType            : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.ObjectType)) |
+                    Write-Verbose
+                    $inDesiredState = $False
+                }
             }
 
             if($toBeRemoved.Count -gt 0)
             {
-                $nonMatch = $rule.Rule
-                ("Non-matching Access rule found:"),
-                ("> Principal             : '{0}'" -f $principal),
-                ("> Path                  : '{0}'" -f $path),
-                ("> IdentityReference     : '{0}'" -f $nonMatch.IdentityReference),
-                ("> ActiveDirectoryRights : '{0}'" -f $nonMatch.ActiveDirectoryRights),
-                ("> AccessControlType     : '{0}'" -f $nonMatch.AccessControlType),
-                ("> InheritanceType       : '{0}'" -f $nonMatch.InheritanceType),
-                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)),
-                ("> ObjectType            : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.ObjectType)) |
-                Write-Verbose
-                $inDesiredState = $False
+                foreach($rule in $toBeRemoved)
+                {
+                    $nonMatch = $rule.Rule
+                    ("Non-matching Access rule found:"),
+                    ("> Principal             : '{0}'" -f $principal),
+                    ("> Path                  : '{0}'" -f $path),
+                    ("> IdentityReference     : '{0}'" -f $nonMatch.IdentityReference),
+                    ("> ActiveDirectoryRights : '{0}'" -f $nonMatch.ActiveDirectoryRights),
+                    ("> AccessControlType     : '{0}'" -f $nonMatch.AccessControlType),
+                    ("> InheritanceType       : '{0}'" -f $nonMatch.InheritanceType),
+                    ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.InheritedObjectType)),
+                    ("> ObjectType            : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $nonMatch.ObjectType)) |
+                    Write-Verbose
+                    $inDesiredState = $False                   
+                }
             }
         }
         else
@@ -475,55 +459,4 @@ Function Compare-ActiveDirectoryAccessRule
         ToBeRemoved = $toBeRemoved
         Absent = $absentToBeRemoved
     }
-}
-
-function Assert-Module
-{
-    [CmdletBinding()]
-    param
-    (
-        [Parameter()] [ValidateNotNullOrEmpty()]
-        [System.String]
-        $ModuleName = 'ActiveDirectory'
-    )
-
-    if (-not (Get-Module -Name $ModuleName -ListAvailable))
-    {
-        $errorId = '{0}_ModuleNotFound' -f $ModuleName;
-        $errorMessage = $localizedString.RoleNotFoundError -f $ModuleName;
-        ThrowInvalidOperationError -ErrorId $errorId -ErrorMessage $errorMessage;
-    }
-} 
-
-Function Get-SchemaIdGuid
-{
-    Param 
-    (
-        [Parameter()]
-        [string]
-        $ObjectName
-    )
-
-    if($ObjectName)
-    {
-        $value = Get-ADObject -filter {name -eq $ObjectName} -SearchBase (Get-ADRootDSE).schemaNamingContext -prop schemaIDGUID
-        return [system.guid]$value.schemaIDGUID 
-    }
-    else
-    {
-        return [system.guid]"00000000-0000-0000-0000-000000000000"
-    }
-}
-
-Function Get-SchemaObjectName
-{
-    Param 
-    (
-        [Parameter()]
-        [guid]
-        $SchemaIdGuid
-    )
-
-        $value = Get-ADObject -filter {schemaIDGUID  -eq $SchemaIdGuid} -SearchBase (Get-ADRootDSE).schemaNamingContext -prop schemaIDGUID
-        return $value.name 
 }
