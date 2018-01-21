@@ -203,7 +203,7 @@ Function Set-TargetResource
                 }
             }
 
-            foreach($Rule in $AbsentToBeRemoved.Rule)
+            foreach($Rule in $AbsentToBeRemoved)
             {
                 $NonMatch = $Rule.Rule
                 ("Removing audit rule:"),
@@ -215,10 +215,10 @@ Function Set-TargetResource
                 ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType)) |
                 Write-Verbose
 
-                $currentAcl.RemoveAuditRule($Rule)
+                $currentAcl.RemoveAuditRule($Rule.Rule)
             }
 
-            foreach($Rule in $ToBeRemoved.Rule)
+            foreach($Rule in $ToBeRemoved)
             {
                 $NonMatch = $Rule.Rule
                 ("Removing audit rule:"),
@@ -229,7 +229,7 @@ Function Set-TargetResource
                 ("> InheritanceType       : '{0}'" -f $NonMatch.InheritanceType),
                 ("> InheritedObjectType : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType)) |
                 Write-Verbose
-                $currentAcl.RemoveAuditRule($Rule)
+                $currentAcl.RemoveAuditRule($Rule.Rule)
             }
 
             Set-Acl -Path $Path -AclObject $currentAcl

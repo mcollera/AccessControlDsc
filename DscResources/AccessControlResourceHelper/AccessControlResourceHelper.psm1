@@ -166,6 +166,13 @@ Function Get-SchemaObjectName
         $SchemaIdGuid
     )
 
+    If($SchemaIdGuid)
+    {
         $value = Get-ADObject -filter {schemaIDGUID  -eq $SchemaIdGuid} -SearchBase (Get-ADRootDSE).schemaNamingContext -prop schemaIDGUID
-        return $value.name 
+        return $value.name
+    }
+    else
+    {
+        return "none"
+    } 
 }
