@@ -15,7 +15,7 @@ configuration Sample_ADAccessControl
                         ActiveDirectoryAccessRule
                         {
                             AccessControlType = 'Allow'
-                            ActiveDirectoryRights = 'FullControl'
+                            ActiveDirectoryRights = 'GenericAll'
                             InheritanceType = 'Descendents'
                             Ensure = 'Present'
                         }

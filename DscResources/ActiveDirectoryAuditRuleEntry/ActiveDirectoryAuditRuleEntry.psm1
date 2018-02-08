@@ -406,7 +406,7 @@ Function ConvertTo-ActiveDirectoryAuditRule
 
     foreach($ace in $AccessControlList.AccessControlEntry)
     {
-        $InheritedObjectType = Get-SchemaIdGuid -ObjectName $ace.InheritedObjectType
+        $InheritedObjectType = Get-DelegationRightsGuid -ObjectName $ace.InheritedObjectType
         $rule = [PSCustomObject]@{
             Rules = New-Object System.DirectoryServices.ActiveDirectoryAuditRule($IdentityRef, $ace.ActiveDirectoryRights, $ace.AuditFlags, $ace.InheritanceType, $InheritedObjectType)
             Ensure = $ace.Ensure
