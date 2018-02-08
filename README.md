@@ -11,7 +11,7 @@ This project has adopted the [Microsoft Open Source Code of Conduct](
   https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of Conduct FAQ](
   https://opensource.microsoft.com/codeofconduct/faq/)
-or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions 
+or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions
 or comments.
 
 ## Contributing
@@ -21,11 +21,42 @@ Please check out common DSC Resources [contributing guidelines](
 
 ## Resources
 
-* **[ActiveDirectoryAuditRule](#ActiveDirectoryAuditRule):** Provides the ability to manage audit access for Active Directory object SACL.
+* [**ActiveDirectoryAccessEntry**](#activedirectoryaccessentry): Provides the ability to manage access entries for Active Directory objects.
 
-* **[NtfsAccessEntry](#NtfsAccessEntry):** Provides the ability to manage access entries for NTFS files and directories.
+* [**ActiveDirectoryAuditRule**](#activedirectoryauditrule): Provides the ability to manage audit access for Active Directory object SACL.
 
-* **[RegistryAccessEntry](#RegistryAccessEntry):** Provides the ability to manage access entries for Registry objects.
+* [**NtfsAccessEntry**](#ntfsaccessentry): Provides the ability to manage access entries for NTFS files and directories.
+
+* [**RegistryAccessEntry**](#registryaccessentry):  Provides the ability to manage access entries for Registry objects.
+
+### **ActiveDirectoryAccessEntryRule**
+
+* **[String] DistinguishedName** _(Key)_: Indicates the Distinguished Name value for the target Active Directory Object.
+
+* **[String] AccessControlList**: Indicates the access control information in the form of an array of instances of the ActiveDirectoryAccessControlList CIM class. Includes the following properties:
+
+  * **[String] Principal:** Indicates the identity of the principal.
+
+  * **[String] AccessControlEntry:** Indicates the access control entry in the form of an array of instances of the AccessControlList CIM class.  Includes the following properties:
+
+    * **[String] AccessControlType:** Specifies whether an AccessRule object is used to allow or deny access. _{ Allow | Deny }_
+
+    * **[String] ActiveDirectoryRights:** Specifies the access rights that are assigned to an Active Directory Domain Services object. _{ AccessSystemSecurity | CreateChild | Delete | DeleteChild | DeleteTree | ExtendedRight | GenericAll | GenericExecute | GenericRead | GenericWrite | ListChildren | ListObject | ReadControl | ReadProperty | Self | WriteDacl | WriteOwner | WriteProperty }_
+
+    * **[String] Ensure:** Whether the rights should be present or absent. _{ Ensure | Present }_
+
+    * **[String] InheritanceType:** Specifies if, and how, ACE information is applied to an object and its descendents. _{ All | Children | Descendents | None | SelfAndChildren }_
+
+    * **[String] InheritedObjectType:** Specifies the object type name that identifies the type of child object that can inherit this access rule.
+
+    * **[String] ObjectType:** Specifies the object type name that identifies the type of child object that can inherit this access rule.
+
+  * [String] ForcePrincipal: Indicates whether the rights for this principal should be forced.  Will remove any rights not explicitly defined in the configuration for the principal.
+
+#### ActiveDirectoryAccessRule Examples
+
+* [Set Active Directory OU access rules](
+  https://github.com/mcollera/AccessControlDsc/blob/master/Examples/ActiveDirectoryAccessEntry_example.ps1)
 
 ### **ActiveDirectoryAuditRule**
 
@@ -39,7 +70,7 @@ Please check out common DSC Resources [contributing guidelines](
 
     * **[String] AuditFlags:** Specifies the conditions for auditing attempts to access a securable object. _{ Success | Failure }_
 
-    * **[String] ActiveDirectoryRights:** Specifies the access rights that are assigned to an Active Directory Domain Services object. _{ AccessSystemSecurity | CreateAllChildObjects | Delete | DeleteAllChildObjects | DeleteSubtree | AllExtendedRights | FullControl | Execute | Read | Write | ListContents | ListObject | ReadPermissions | ReadAllProperties | AllValidatedWrites | ModifyPermissions | ModifyOwner | WriteAllProperties }_
+    * **[String] ActiveDirectoryRights:** Specifies the access rights that are assigned to an Active Directory Domain Services object. _{ AccessSystemSecurity | CreateChild | Delete | DeleteChild | DeleteTree | ExtendedRight | GenericAll | GenericExecute | GenericRead | GenericWrite | ListChildren | ListObject | ReadControl | ReadProperty | Self | WriteDacl | WriteOwner | WriteProperty }_
 
     * **[String] Ensure:** Whether the rights should be present or absent. _{ Ensure | Present }_
 
@@ -54,7 +85,7 @@ Please check out common DSC Resources [contributing guidelines](
 #### ActiveDirectoryAuditRule Examples
 
 * [Set Active Directory OU audit access rules](
-  https://github.com/PowerShell/AccessControlDsc/blob/master/Examples/ActiveDirectoryAuditRuleEntry_example.ps1)
+  https://github.com/mcollera/AccessControlDsc/blob/master/Examples/ActiveDirectoryAuditRuleEntry_example.ps1)
 
 ### **NtfsAccessEntry**
 
@@ -81,7 +112,7 @@ Please check out common DSC Resources [contributing guidelines](
 #### NtfsAccessEntry Examples
 
 * [Set access entries for NTFS folders](
-  https://github.com/PowerShell/AccessControlDsc/blob/master/Examples/NtfsAccessEntry_example.ps1)
+  https://github.com/mcollera/AccessControlDsc/blob/master/Examples/NtfsAccessEntry_example.ps1)
 
 ### **RegistryAccessEntry**
 
@@ -108,11 +139,14 @@ Please check out common DSC Resources [contributing guidelines](
 #### RegistryAccessEntry Examples
 
 * [Configure access entries for registry key](
-  https://github.com/PowerShell/AccessControlDsc/blob/master/Examples/RegistryAccessEntry_example.ps1)
+  https://github.com/mcollera/AccessControlDsc/blob/master/Examples/RegistryAccessEntry_example.ps1)
 
 ## Versions
 
-### Unreleased
+### 1.1.0.0
+
+* Added ActiveDirectoryAccessEntry resource
+* **Breaking Change:** Modified ActiveDirectoryAuditRuleEntry *ActiveDirectoryRights* parameter values to match [System.DirectoryServices.ActiveDirectoryRights](https://msdn.microsoft.com/en-us/library/system.directoryservices.activedirectoryrights(v=vs.110).aspx) members
 
 ### 1.0.0.0
 
