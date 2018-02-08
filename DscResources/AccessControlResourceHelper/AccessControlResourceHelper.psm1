@@ -157,7 +157,7 @@ function Get-DelegationRightsGuid
         Get-ADObject -SearchBase ($rootdse.ConfigurationNamingContext) -LDAPFilter "(&(objectclass=controlAccessRight)(rightsguid=*))" -Properties Name,rightsGuid | 
             Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.rightsGuid }
 
-        return $guidmap[$ObjectName]
+        return [system.guid]$guidmap[$ObjectName]
     }
     else
     {

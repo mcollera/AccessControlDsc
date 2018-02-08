@@ -19,7 +19,7 @@ configuration Sample_ADAccessControl
                             InheritanceType = 'Descendents'
                             Ensure = 'Present'
                         }
-                    )               
+                    )
                 }
             )
         }
@@ -40,7 +40,7 @@ configuration Sample_ADAccessControl
                             InheritedObjectType = 'organizational-unit'
                             Ensure = 'Present'
                         }
-                    )               
+                    )
                 }
                 ActiveDirectoryAccessControlList
                 {
@@ -55,7 +55,7 @@ configuration Sample_ADAccessControl
                             ObjectType = 'computer'
                             Ensure = 'Present'
                         }
-                    )               
+                    )
                 }
             )
         }
