@@ -177,6 +177,7 @@ function Get-SchemaObjectName
 
     if($SchemaIdGuid)
     {
+        $guidmap = @{}
         Get-ADObject -SearchBase ($rootdse.SchemaNamingContext) -LDAPFilter "(schemaidguid=*)" -Properties Name,schemaIDGUID | 
             Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.schemaIDGUID }
 
