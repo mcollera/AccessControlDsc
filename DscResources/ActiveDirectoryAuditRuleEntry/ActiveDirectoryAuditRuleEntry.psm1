@@ -203,7 +203,7 @@ Function Set-TargetResource
                 }
             }
 
-            foreach($Rule in $AbsentToBeRemoved.Rule)
+            foreach($Rule in $AbsentToBeRemoved)
             {
                 $NonMatch = $Rule.Rule
                 ("Removing audit rule:"),
@@ -215,10 +215,10 @@ Function Set-TargetResource
                 ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType)) |
                 Write-Verbose
 
-                $currentAcl.RemoveAuditRule($Rule)
+                $currentAcl.RemoveAuditRule($Rule.Rule)
             }
 
-            foreach($Rule in $ToBeRemoved.Rule)
+            foreach($Rule in $ToBeRemoved)
             {
                 $NonMatch = $Rule.Rule
                 ("Removing audit rule:"),
@@ -229,7 +229,7 @@ Function Set-TargetResource
                 ("> InheritanceType       : '{0}'" -f $NonMatch.InheritanceType),
                 ("> InheritedObjectType : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType)) |
                 Write-Verbose
-                $currentAcl.RemoveAuditRule($Rule)
+                $currentAcl.RemoveAuditRule($Rule.Rule)
             }
 
             Set-Acl -Path $Path -AclObject $currentAcl
@@ -406,7 +406,7 @@ Function ConvertTo-ActiveDirectoryAuditRule
 
     foreach($ace in $AccessControlList.AccessControlEntry)
     {
-        $InheritedObjectType = Get-SchemaIdGuid -ObjectName $ace.InheritedObjectType
+        $InheritedObjectType = Get-DelegationRightsGuid -ObjectName $ace.InheritedObjectType
         $rule = [PSCustomObject]@{
             Rules = New-Object System.DirectoryServices.ActiveDirectoryAuditRule($IdentityRef, $ace.ActiveDirectoryRights, $ace.AuditFlags, $ace.InheritanceType, $InheritedObjectType)
             Ensure = $ace.Ensure
@@ -500,54 +500,4 @@ Function Compare-ActiveDirectoryAuditRule
         ToBeRemoved = $ToBeRemoved
         Absent = $AbsentToBeRemoved
     }
-}
-
-function Assert-Module
-{
-    [CmdletBinding()]
-    param
-    (
-        [Parameter()] [ValidateNotNullOrEmpty()]
-        [System.String] $ModuleName = 'ActiveDirectory'
-    )
-
-    if (-not (Get-Module -Name $ModuleName -ListAvailable))
-    {
-        $errorId = '{0}_ModuleNotFound' -f $ModuleName;
-        $errorMessage = $localizedString.RoleNotFoundError -f $moduleName;
-        ThrowInvalidOperationError -ErrorId $errorId -ErrorMessage $errorMessage;
-    }
-} 
-
-Function Get-SchemaIdGuid
-{
-    Param 
-    (
-        [Parameter()]
-        [string]
-        $ObjectName
-    )
-
-    if($ObjectName)
-    {
-        $value = Get-ADObject -filter {name -eq $ObjectName} -SearchBase (Get-ADRootDSE).schemaNamingContext -prop schemaIDGUID
-        return [guid]$value.schemaIDGUID 
-    }
-    else
-    {
-        return [system.guid]"00000000-0000-0000-0000-000000000000"
-    }
-}
-
-Function Get-SchemaObjectName
-{
-    Param 
-    (
-        [Parameter()]
-        [guid]
-        $SchemaIdGuid
-    )
-
-        $value = Get-ADObject -filter {schemaIDGUID  -eq $SchemaIdGuid} -SearchBase (Get-ADRootDSE).schemaNamingContext -prop schemaIDGUID
-        return $value.name 
 }

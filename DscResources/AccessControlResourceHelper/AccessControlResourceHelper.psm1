@@ -118,3 +118,79 @@ function ConvertTo-SID
     }
     
 }
+
+function Assert-Module
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [System.String]
+        $ModuleName
+    )
+
+    if (-not (Get-Module -Name $ModuleName -ListAvailable))
+    {
+        $errorId = '{0}_ModuleNotFound' -f $ModuleName;
+        $errorMessage = $localizedString.RoleNotFoundError -f $ModuleName;
+        ThrowInvalidOperationError -ErrorId $errorId -ErrorMessage $errorMessage;
+    }
+} 
+
+function Get-DelegationRightsGuid
+{
+    Param 
+    (
+        [Parameter()]
+        [string]
+        $ObjectName
+    )
+
+    if($ObjectName)
+    {
+        # Create a hashtable to store the GUID value of each schemaGuids and rightsGuids
+        $guidmap = @{}
+        $rootdse = Get-ADRootDSE
+        Get-ADObject -SearchBase ($rootdse.SchemaNamingContext) -LDAPFilter "(schemaidguid=*)" -Properties Name,schemaIDGUID | 
+            Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.schemaIDGUID }
+
+        Get-ADObject -SearchBase ($rootdse.ConfigurationNamingContext) -LDAPFilter "(&(objectclass=controlAccessRight)(rightsguid=*))" -Properties Name,rightsGuid | 
+            Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.rightsGuid }
+
+        return [system.guid]$guidmap[$ObjectName]
+    }
+    else
+    {
+        return [system.guid]"00000000-0000-0000-0000-000000000000"
+    }
+}
+
+function Get-SchemaObjectName
+{
+    Param
+    (
+        [Parameter()]
+        [guid]
+        $SchemaIdGuid
+    )
+
+    if($SchemaIdGuid)
+    {
+        $guidmap = @{}
+        $rootdse = Get-ADRootDSE
+        Get-ADObject -SearchBase ($rootdse.SchemaNamingContext) -LDAPFilter "(schemaidguid=*)" -Properties Name,schemaIDGUID | 
+            Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.schemaIDGUID }
+
+        Get-ADObject -SearchBase ($rootdse.ConfigurationNamingContext) -LDAPFilter "(&(objectclass=controlAccessRight)(rightsguid=*))" -Properties Name,rightsGuid | 
+            Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.rightsGuid }
+
+        # This is to address the edge case where one guid resolves to multiple names ex. f3a64788-5306-11d1-a9c5-0000f80367c1 resolves to Service-Principal-Name,Validated-SPN
+        $names = ( $guidmap.GetEnumerator() | Where-Object -FilterScript { $_.Value -eq $SchemaIdGuid } ).Name
+        return $names -join ','
+    }
+    else
+    {
+        return "none"
+    }
+}

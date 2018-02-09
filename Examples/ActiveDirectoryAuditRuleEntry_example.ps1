@@ -15,7 +15,7 @@ configuration Sample_ADAccessControl
                         ActiveDirectoryAuditRule
                         {
                             AuditFlags = 'Success'
-                            ActiveDirectoryRights = 'FullControl'
+                            ActiveDirectoryRights = 'GenericAll'
                             InheritanceType = 'Descendents'
                             Ensure = 'Present'
                         }
