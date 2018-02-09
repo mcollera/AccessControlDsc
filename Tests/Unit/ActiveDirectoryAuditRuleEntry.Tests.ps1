@@ -111,7 +111,7 @@ Import-Module "$($PSScriptRoot)\..\TestHelper.psm1" -Force
         Mock -CommandName Test-Path -MockWith { return $true } -ModuleName $DSCResourceName
         Mock -CommandName Assert-Module -MockWith {} -ModuleName $DSCResourceName
         Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'}-ModuleName $DSCResourceName 
-        Mock -CommandName Get-SchemaIdGuid -MockWith { return [guid]"52ea1a9a-be7e-4213-9e69-5f28cb89b56a" } -ModuleName $DSCResourceName
+        Mock -CommandName Get-DelegationRightsGuid -MockWith { return [guid]"52ea1a9a-be7e-4213-9e69-5f28cb89b56a" } -ModuleName $DSCResourceName
         Mock -CommandName Get-SchemaObjectName -MockWith { return "Pwd-Last-Set" } -ModuleName $DSCResourceName
 
         Mock -CommandName Get-Acl -MockWith {
@@ -261,7 +261,7 @@ Import-Module "$($PSScriptRoot)\..\TestHelper.psm1" -Force
         Mock -CommandName Test-Path -MockWith { return $true } -ModuleName $DSCResourceName
         Mock -CommandName Assert-Module -MockWith {} -ModuleName $DSCResourceName
         Mock -CommandName Import-Module -MockWith {} -ParameterFilter {$Name -eq 'ActiveDirectory'} -ModuleName $DSCResourceName
-        Mock -CommandName Get-SchemaIdGuid -MockWith { return [guid]"52ea1a9a-be7e-4213-9e69-5f28cb89b56a" } -ModuleName $DSCResourceName
+        Mock -CommandName Get-DelegationRightsGuid -MockWith { return [guid]"52ea1a9a-be7e-4213-9e69-5f28cb89b56a" } -ModuleName $DSCResourceName
         Mock -CommandName Get-SchemaObjectName -MockWith { return "Pwd-Last-Set" } -ModuleName $DSCResourceName
 
         $Identity = Resolve-Identity -Identity "Everyone"

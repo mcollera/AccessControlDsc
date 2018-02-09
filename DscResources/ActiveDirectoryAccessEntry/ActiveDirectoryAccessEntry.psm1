@@ -361,8 +361,8 @@ Function ConvertTo-ActiveDirectoryAccessRule
 
     foreach($ace in $AccessControlList.AccessControlEntry)
     {
-        $inheritedObjectType = Get-SchemaIdGuid -ObjectName $ace.InheritedObjectType
-        $objectType = Get-SchemaIdGuid -ObjectName $ace.ObjectType
+        $inheritedObjectType = Get-DelegationRightsGuid -ObjectName $ace.InheritedObjectType
+        $objectType = Get-DelegationRightsGuid -ObjectName $ace.ObjectType
         $rule = [PSCustomObject]@{
             Rules = New-Object System.DirectoryServices.ActiveDirectoryAccessRule($IdentityRef, $ace.ActiveDirectoryRights, $ace.AccessControlType, $objectType, $ace.InheritanceType, $inheritedObjectType)
             Ensure = $ace.Ensure

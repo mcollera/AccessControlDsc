@@ -124,7 +124,8 @@ function Assert-Module
     [CmdletBinding()]
     param
     (
-        [Parameter()] [ValidateNotNullOrEmpty()]
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
         [System.String]
         $ModuleName
     )
@@ -137,7 +138,7 @@ function Assert-Module
     }
 } 
 
-Function Get-SchemaIdGuid
+function Get-DelegationRightsGuid
 {
     Param 
     (
@@ -148,8 +149,16 @@ Function Get-SchemaIdGuid
 
     if($ObjectName)
     {
-        $value = Get-ADObject -filter {name -eq $ObjectName} -SearchBase (Get-ADRootDSE).schemaNamingContext -prop schemaIDGUID
-        return [system.guid]$value.schemaIDGUID 
+        # Create a hashtable to store the GUID value of each schemaGuids and rightsGuids
+        $guidmap = @{}
+        $rootdse = Get-ADRootDSE
+        Get-ADObject -SearchBase ($rootdse.SchemaNamingContext) -LDAPFilter "(schemaidguid=*)" -Properties Name,schemaIDGUID | 
+            Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.schemaIDGUID }
+
+        Get-ADObject -SearchBase ($rootdse.ConfigurationNamingContext) -LDAPFilter "(&(objectclass=controlAccessRight)(rightsguid=*))" -Properties Name,rightsGuid | 
+            Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.rightsGuid }
+
+        return [system.guid]$guidmap[$ObjectName]
     }
     else
     {
@@ -157,22 +166,31 @@ Function Get-SchemaIdGuid
     }
 }
 
-Function Get-SchemaObjectName
+function Get-SchemaObjectName
 {
-    Param 
+    Param
     (
         [Parameter()]
         [guid]
         $SchemaIdGuid
     )
 
-    If($SchemaIdGuid)
+    if($SchemaIdGuid)
     {
-        $value = Get-ADObject -filter {schemaIDGUID  -eq $SchemaIdGuid} -SearchBase (Get-ADRootDSE).schemaNamingContext -prop schemaIDGUID
-        return $value.name
+        $guidmap = @{}
+        $rootdse = Get-ADRootDSE
+        Get-ADObject -SearchBase ($rootdse.SchemaNamingContext) -LDAPFilter "(schemaidguid=*)" -Properties Name,schemaIDGUID | 
+            Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.schemaIDGUID }
+
+        Get-ADObject -SearchBase ($rootdse.ConfigurationNamingContext) -LDAPFilter "(&(objectclass=controlAccessRight)(rightsguid=*))" -Properties Name,rightsGuid | 
+            Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.rightsGuid }
+
+        # This is to address the edge case where one guid resolves to multiple names ex. f3a64788-5306-11d1-a9c5-0000f80367c1 resolves to Service-Principal-Name,Validated-SPN
+        $names = ( $guidmap.GetEnumerator() | Where-Object -FilterScript { $_.Value -eq $SchemaIdGuid } ).Name
+        return $names -join ','
     }
     else
     {
         return "none"
-    } 
+    }
 }
