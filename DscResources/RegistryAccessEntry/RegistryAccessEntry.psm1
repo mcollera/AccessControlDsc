@@ -113,6 +113,8 @@ Function Set-TargetResource
         $Force = $false
     )
 
+    $ACLRules = @()
+
     if(-not (Test-Path -Path $Path))
     {
         $errorMessage = $LocalizedData.ErrorPathNotFound -f $Path
@@ -235,6 +237,8 @@ Function Test-TargetResource
         [bool]
         $Force = $false
     )
+
+    $ACLRules = @()
 
     if(-not (Test-Path -Path $Path))
     {
@@ -384,7 +388,7 @@ Function Compare-RegistryRule
 
     foreach($refrenceObject in $Actual)
     {
-        $match = $Expected.Rules.Where({
+        $match = @($Expected.Rules).Where({
             $_.RegistryRights -eq $refrenceObject.RegistryRights -and
             $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
             $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and

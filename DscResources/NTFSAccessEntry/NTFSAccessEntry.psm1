@@ -117,6 +117,8 @@ Function Set-TargetResource
         $Force = $false
     )
 
+    $ACLRules = @()
+
     $inputPath = Get-InputPath($Path)
 
     if(Test-Path -Path $inputPath)
@@ -273,6 +275,8 @@ Function Test-TargetResource
         [bool]
         $Force = $false
     )
+
+    $ACLRules = @()
 
     $InDesiredState = $True
     $inputPath = Get-InputPath($Path)
@@ -598,7 +602,7 @@ Function Compare-NtfsRule
 
     foreach($refrenceObject in $Actual)
     {
-        $match = $Expected.Rules.Where({
+        $match = @($Expected.Rules).Where({
             (((($_.FileSystemRights.value__ -band $refrenceObject.FileSystemRights.value__) -match "$($_.FileSystemRights.value__)|$($refrenceObject.FileSystemRights.value__)") -and !$Force) -or ($_.FileSystemRights -eq $refrenceObject.FileSystemRights -and $Force)) -and
             $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
             $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
