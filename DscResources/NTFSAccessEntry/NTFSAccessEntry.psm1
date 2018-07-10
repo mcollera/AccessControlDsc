@@ -30,6 +30,10 @@ Function Get-TargetResource
 
         [Parameter()]
         [bool]
+        $DisableInheritance = $false,
+
+        [Parameter()]
+        [bool]
         $Force = $false
     )
 
@@ -94,6 +98,7 @@ Function Get-TargetResource
         Force = $Force
         Path = $inputPath
         AccessControlList = $CimAccessControlList
+        DisableInheritance = $currentACL.AreAccessRulesProtected
     }
 
     return $ReturnValue
@@ -114,6 +119,10 @@ Function Set-TargetResource
 
         [Parameter()]
         [bool]
+        $DisableInheritance = $false,
+
+        [Parameter()]
+        [bool]
         $Force = $false
     )
 
@@ -123,9 +132,27 @@ Function Set-TargetResource
 
     if(Test-Path -Path $inputPath)
     {
-        $currentAcl = Get-Acl -Path $inputPath
+        $DirectoryInfo = Get-Item -Path $inputPath
+
+        $currentAcl = $DirectoryInfo.GetAccessControl()
+
         if($null -ne $currentAcl)
         {
+            if ($currentAcl.AreAccessRulesProtected -ne $DisableInheritance)
+            {
+                if ($currentAcl.AreAccessRulesProtected)
+                {
+                    Write-Verbose -Message 'Enabling inheritance'
+                }
+                else
+                {
+                    Write-Verbose -Message 'Disabling inheritance'
+                }
+
+                $preserveInheritance = $false
+                $currentAcl.SetAccessRuleProtection($DisableInheritance, $preserveInheritance)
+            }
+
             if($Force)
             {
                 foreach($AccessControlItem in $AccessControlList)
@@ -167,17 +194,6 @@ Function Set-TargetResource
                     }
                 }
             }
-
-            $isInherited = 0
-            $isInherited += $AbsentToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
-            $isInherited += $ToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
-
-            if($isInherited -gt 0)
-            {
-                $currentAcl.SetAccessRuleProtection($true,$true)
-                Set-Acl -Path $inputPath -AclObject $currentAcl             
-            }
-            
 
             foreach($Rule in $ToBeRemoved.Rule)
             {
@@ -226,23 +242,22 @@ Function Set-TargetResource
                 $currentAcl.RemoveAccessRule($Rule)
             }                      
 
-            foreach($Rule in $Expected)
+            foreach($NonMatchRule in $Expected.Where{$_.Match -eq $false}.Rule)
             {
-                    $NonMatch = $Rule.Rule
-                    ("Adding access rule:"),
-                    ("> Principal         : '{0}'" -f $NonMatch.IdentityReference),
-                    ("> Path              : '{0}'" -f $inputPath),
-                    ("> IdentityReference : '{0}'" -f $NonMatch.IdentityReference),
-                    ("> AccessControlType : '{0}'" -f $NonMatch.AccessControlType),
-                    ("> FileSystemRights  : '{0}'" -f $NonMatch.FileSystemRights),
-                    ("> InheritanceFlags  : '{0}'" -f $NonMatch.InheritanceFlags),
-                    ("> PropagationFlags  : '{0}'" -f $NonMatch.PropagationFlags) |
-                    Write-Verbose
+                ("Adding access rule:"),
+                ("> Principal         : '{0}'" -f $NonMatchRule.IdentityReference),
+                ("> Path              : '{0}'" -f $inputPath),
+                ("> IdentityReference : '{0}'" -f $NonMatchRule.IdentityReference),
+                ("> AccessControlType : '{0}'" -f $NonMatchRule.AccessControlType),
+                ("> FileSystemRights  : '{0}'" -f $NonMatchRule.FileSystemRights),
+                ("> InheritanceFlags  : '{0}'" -f $NonMatchRule.InheritanceFlags),
+                ("> PropagationFlags  : '{0}'" -f $NonMatchRule.PropagationFlags) |
+                Write-Verbose
 
-                    $currentAcl.AddAccessRule($Rule.Rule)
+                $currentAcl.AddAccessRule($NonMatchRule)
             }
             
-            Set-Acl -Path $inputPath -AclObject $currentAcl
+            $DirectoryInfo.SetAccessControl($currentAcl)
         }
         else
         {
@@ -273,6 +288,10 @@ Function Test-TargetResource
 
         [Parameter()]
         [bool]
+        $DisableInheritance = $false,
+
+        [Parameter()]
+        [bool]
         $Force = $false
     )
 
@@ -284,7 +303,7 @@ Function Test-TargetResource
     if(Test-Path -Path $inputPath)
     {
         $currentACL = Get-Acl -Path $inputPath
-        $mappedACL = Update-FileSystemRightsMapping($currentAcl)
+        $mappedACL  = Update-FileSystemRightsMapping($currentAcl)
 
         if($null -ne $currentACL)
         {
@@ -292,8 +311,8 @@ Function Test-TargetResource
             {
                 foreach($AccessControlItem in $AccessControlList)
                 {
-                    $Principal = $AccessControlItem.Principal
-                    $Identity = Resolve-Identity -Identity $Principal
+                    $Principal   = $AccessControlItem.Principal
+                    $Identity    = Resolve-Identity -Identity $Principal
                     $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
                     $ACLRules += ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
@@ -353,7 +372,7 @@ Function Test-TargetResource
 
             if($AbsentToBeRemoved.Count -gt 0)
             {
-                foreach ($rule in $AbsentToBeRemoved)
+                foreach ($rule in $AbsentToBeRemoved.Rule)
                 {
                     ("Found [absent] permission rule:"),
                     ("> Principal         : '{0}'" -f $Rule.IdentityReference),
@@ -371,7 +390,7 @@ Function Test-TargetResource
 
             if($ToBeRemoved.Count -gt 0)
             {
-                foreach ($Rule in $ToBeRemoved)
+                foreach ($Rule in $ToBeRemoved.Rule)
                 {
                     ("Non-matching permission entry found:"),
                     ("> Principal         : '{0}'" -f $Rule.IdentityReference),
@@ -384,6 +403,12 @@ Function Test-TargetResource
                     Write-Verbose
                 }
 
+                $InDesiredState = $False
+            }
+
+            if ($currentACL.AreAccessRulesProtected -ne $DisableInheritance)
+            {
+                Write-Verbose -Message ('Inheritance is {0} and should be {1}.' -f (-not $currentACL.AreAccessRulesProtected), (-not $DisableInheritance))
                 $InDesiredState = $False
             }
         }
@@ -400,7 +425,7 @@ Function Test-TargetResource
         Write-Verbose -Message $Message
         $InDesiredState = $False
     }
-    
+
     return $InDesiredState
 }
 
@@ -557,7 +582,8 @@ Function Compare-NtfsRule
     $AbsentToBeRemoved = @()
 
     $PresentRules = $Expected.Where({$_.Ensure -eq 'Present'}).Rules
-    $AbsentRules = $Expected.Where({$_.Ensure -eq 'Absent'}).Rules
+    $AbsentRules  = $Expected.Where({$_.Ensure -eq 'Absent'}).Rules
+
     foreach($refrenceObject in $PresentRules)
     {
         $match = $Actual.Where({
@@ -600,7 +626,7 @@ Function Compare-NtfsRule
         }
     }
 
-    foreach($refrenceObject in $Actual)
+    foreach($refrenceObject in $Actual.Where{$_.IsInherited -eq $false})
     {
         $match = @($Expected.Rules).Where({
             (((($_.FileSystemRights.value__ -band $refrenceObject.FileSystemRights.value__) -match "$($_.FileSystemRights.value__)|$($refrenceObject.FileSystemRights.value__)") -and !$Force) -or ($_.FileSystemRights -eq $refrenceObject.FileSystemRights -and $Force)) -and
@@ -633,7 +659,7 @@ Function Update-FileSystemRightsMapping
         $ACE
     )
 
-    foreach($Rule in $ACE.Access)
+    foreach($Rule in $ACE.Access.Where{$_.IsInherited -eq $false})
     {
         $rightsBand = [int]0xf0000000 -band $Rule.FileSystemRights.value__
         if( ($rightsBand -gt 0) -or ($rightsBand -lt 0) )
