@@ -136,6 +136,8 @@ Function Set-TargetResource
 
         $currentAcl = $DirectoryInfo.GetAccessControl()
 
+        $Expected = @()
+
         if($null -ne $currentAcl)
         {
             if ($currentAcl.AreAccessRulesProtected -ne $DisableInheritance)
@@ -208,7 +210,7 @@ Function Set-TargetResource
                     ("> InheritanceFlags  : '{0}'" -f $Rule.InheritanceFlags),
                     ("> PropagationFlags  : '{0}'" -f $Rule.PropagationFlags) |
                     Write-Verbose
-                    $currentAcl.RemoveAccessRule($Rule)
+                    $currentAcl.RemoveAccessRuleSpecific($Rule)
                 }
                 catch
                 {
@@ -239,7 +241,7 @@ Function Set-TargetResource
                 ("> PropagationFlags  : '{0}'" -f $Rule.PropagationFlags) |
                 Write-Verbose
 
-                $currentAcl.RemoveAccessRule($Rule)
+                $currentAcl.RemoveAccessRuleSpecific($Rule)
             }                      
 
             foreach($NonMatchRule in $Expected.Where{$_.Match -eq $false}.Rule)
@@ -304,6 +306,8 @@ Function Test-TargetResource
     {
         $currentACL = Get-Acl -Path $inputPath
         $mappedACL  = Update-FileSystemRightsMapping($currentAcl)
+
+        $Expected = @()
 
         if($null -ne $currentACL)
         {
