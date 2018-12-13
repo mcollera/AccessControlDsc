@@ -218,12 +218,12 @@ Function Set-TargetResource
                 try
                 {
                     #If failure due to Identity translation issue then create the same rule with the identity as a sid to remove account
-                    $SIDRule = ConvertTo-SidIdentityRegistryAccessRule -Rule $Rule
-                    $currentAcl.AddAccessRule($Rule.Rule)
+                    $SIDRule = ConvertTo-SidIdentityRegistryAccessRule -Rule $Rule.Rule
+                    $currentAcl.AddAccessRule($SIDRule)
                 }
                 catch
                 {
-                    $message = $LocalizedData.AclNotFound -f $($Rule.IdentityReference.Value)
+                    $message = $LocalizedData.AclNotFound -f $($Rule.Rule.IdentityReference.Value)
                     Write-Verbose -Message $message
                 }
             }
@@ -546,14 +546,14 @@ function ConvertTo-SidIdentityRegistryAccessRule
 
     if ($Rule.IdentityReference.Value.Contains('\'))
     {
-        [System.Security.Principal.NTAccount]$PrinicipalName = $Rule.IdentityReference.Value.split('\')[1]
+        [System.Security.Principal.NTAccount]$Principal = $Rule.IdentityReference.Value.split('\')[1]
     }
     else
     {
-        [System.Security.Principal.NTAccount]$PrinicipalName = $Rule.IdentityReference.Value
+        [System.Security.Principal.NTAccount]$Principal = $Rule.IdentityReference.Value
     }
 
-    $SID = $PrinicipalName.Translate([System.Security.Principal.SecurityIdentifier])
+    $SID = $Principal.Translate([System.Security.Principal.SecurityIdentifier])
     $SIDRule = New-Object System.Security.AccessControl.RegistryAccessRule($SID, $Rule.RegistryRights.value__, $Rule.InheritanceFlags.value__, $Rule.PropagationFlags.value__, $Rule.AccessControlType.value__)
 
     return $SIDRule
