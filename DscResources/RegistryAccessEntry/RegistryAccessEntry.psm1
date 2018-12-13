@@ -1,16 +1,16 @@
 Import-Module -Name (Join-Path -Path ( Split-Path $PSScriptRoot -Parent ) `
-                               -ChildPath 'AccessControlResourceHelper\AccessControlResourceHelper.psm1') `
-                               -Force
+        -ChildPath 'AccessControlResourceHelper\AccessControlResourceHelper.psm1') `
+    -Force
 
 # Localized messages
 data LocalizedData
 {
     # culture="en-US"
     ConvertFrom-StringData -StringData @'
-        ErrorPathNotFound = The requested path "{0}" cannot be found. 
-        AclNotFound = Error obtaining "{0}" ACL 
-        AclFound = Obtained "{0}" ACL 
-        RemoveAccessError = "Unable to remove Access for "{0}" 
+        ErrorPathNotFound = The requested path "{0}" cannot be found.
+        AclNotFound = Error obtaining "{0}" ACL
+        AclFound = Obtained "{0}" ACL
+        RemoveAccessError = "Unable to remove Access for "{0}"
 '@
 }
 
@@ -24,7 +24,7 @@ Function Get-TargetResource
         [System.String]
         $Path,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [Microsoft.Management.Infrastructure.CimInstance[]]
         $AccessControlList,
 
@@ -35,7 +35,7 @@ Function Get-TargetResource
 
     $NameSpace = "root/Microsoft/Windows/DesiredStateConfiguration"
 
-    if(-not (Test-Path -Path $Path))
+    if (-not (Test-Path -Path $Path))
     {
         $message = $LocalizedData.ErrorPathNotFound -f $Path
         Write-Verbose -Message $message
@@ -45,12 +45,12 @@ Function Get-TargetResource
 
     $CimAccessControlList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
 
-    if($null -ne $currentACL) 
+    if ($null -ne $currentACL)
     {
-        $message = $LocalizedData.AclFound -f $Path 
-        Write-Verbose -Message $message 
-        
-        foreach($Principal in $AccessControlList)
+        $message = $LocalizedData.AclFound -f $Path
+        Write-Verbose -Message $message
+
+        foreach ($Principal in $AccessControlList)
         {
             $CimAccessControlEntries = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
 
@@ -58,8 +58,8 @@ Function Get-TargetResource
             $ForcePrincipal = $Principal.ForcePrincipal
 
             $Identity = Resolve-Identity -Identity $PrincipalName
-            $currentPrincipalAccess = $currentACL.Access.Where({$_.IdentityReference -eq $Identity.Name})
-            foreach($Access in $currentPrincipalAccess)
+            $currentPrincipalAccess = $currentACL.Access.Where( {$_.IdentityReference -eq $Identity.Name})
+            foreach ($Access in $currentPrincipalAccess)
             {
                 $AccessControlType = $Access.AccessControlType.ToString()
                 $Rights = $Access.RegistryRights.ToString().Split(',').Trim()
@@ -67,28 +67,28 @@ Function Get-TargetResource
 
                 $CimAccessControlEntries += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName AccessControlEntry -Property @{
                     AccessControlType = $AccessControlType
-                    Rights = @($Rights)
-                    Inheritance = $Inheritance
-                    Ensure = ""
+                    Rights            = @($Rights)
+                    Inheritance       = $Inheritance
+                    Ensure            = ""
                 }
             }
 
             $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName AccessControlList -Property @{
-                            Principal = $PrincipalName
-                            ForcePrincipal = $ForcePrincipal
-                            AccessControlEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($CimAccessControlEntries)
-                        }
+                Principal          = $PrincipalName
+                ForcePrincipal     = $ForcePrincipal
+                AccessControlEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($CimAccessControlEntries)
+            }
         }
     }
-    else 
-    { 
-        $message = $LocalizedData.AclNotFound -f $Path 
-        Write-Verbose -Message $message 
-    } 
+    else
+    {
+        $message = $LocalizedData.AclNotFound -f $Path
+        Write-Verbose -Message $message
+    }
 
     $ReturnValue = @{
-        Force = $Force
-        Path = $Path
+        Force             = $Force
+        Path              = $Path
         AccessControlList = $CimAccessControlList
     }
 
@@ -104,7 +104,7 @@ Function Set-TargetResource
         [System.String]
         $Path,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [Microsoft.Management.Infrastructure.CimInstance[]]
         $AccessControlList,
 
@@ -115,29 +115,29 @@ Function Set-TargetResource
 
     $ACLRules = @()
 
-    if(-not (Test-Path -Path $Path))
+    if (-not (Test-Path -Path $Path))
     {
         $errorMessage = $LocalizedData.ErrorPathNotFound -f $Path
         throw $errorMessage
     }
 
     $currentAcl = Get-Acl -Path $Path
-    if($null -eq $currentAcl)
+    if ($null -eq $currentAcl)
     {
         $currentAcl = New-Object -TypeName "System.Security.AccessControl.RegistrySecurity"
     }
 
-    if($Force)
+    if ($Force)
     {
-        foreach($AccessControlItem in $AccessControlList)
+        foreach ($AccessControlItem in $AccessControlList)
         {
             $Principal = $AccessControlItem.Principal
             $Identity = Resolve-Identity -Identity $Principal
             $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
             $ACLRules += ConvertTo-RegistryAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
-        }    
-        
+        }
+
         $actualAce = $currentAcl.Access
 
         $Results = Compare-RegistryRule -Expected $ACLRules -Actual $actualAce
@@ -148,13 +148,13 @@ Function Set-TargetResource
     }
     else
     {
-        foreach($AccessControlItem in $AccessControlList)
+        foreach ($AccessControlItem in $AccessControlList)
         {
             $Principal = $AccessControlItem.Principal
             $Identity = Resolve-Identity -Identity $Principal
             $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
-            $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
+            $actualAce = $currentAcl.Access.Where( {$_.IdentityReference -eq $Identity.Name})
 
             $ACLRules = ConvertTo-RegistryAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
             $Results = Compare-RegistryRule -Expected $ACLRules -Actual $actualAce
@@ -162,28 +162,28 @@ Function Set-TargetResource
             $Expected += $Results.Rules
             $AbsentToBeRemoved += $Results.Absent
 
-            if($AccessControlItem.ForcePrinciPal)
+            if ($AccessControlItem.ForcePrinciPal)
             {
                 $ToBeRemoved += $Results.ToBeRemoved
             }
         }
     }
     $isInherited = 0
-    $isInherited += $AbsentToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
-    $isInherited += $ToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
+    $isInherited += $AbsentToBeRemoved.Rule.Where( {$_.IsInherited -eq $true}).Count
+    $isInherited += $ToBeRemoved.Rule.Where( {$_.IsInherited -eq $true}).Count
 
-    if($isInherited -gt 0)
+    if ($isInherited -gt 0)
     {
-        $currentAcl.SetAccessRuleProtection($true,$true)
+        $currentAcl.SetAccessRuleProtection($true, $true)
         Set-Acl -Path $Path -AclObject $currentAcl
     }
 
-    foreach($Rule in $AbsentToBeRemoved.Rule)
+    foreach ($Rule in $AbsentToBeRemoved.Rule)
     {
         $currentAcl.RemoveAccessRule($Rule)
     }
 
-    foreach($Rule in $ToBeRemoved.Rule)
+    foreach ($Rule in $ToBeRemoved.Rule)
     {
         try
         {
@@ -193,26 +193,40 @@ Function Set-TargetResource
         {
             try
             {
-                #If failure due to Idenitty translation issue then create the same rule with the identity as a sid to remove account
-                $PrinicipalName = $Rule.IdentityReference.Value.split('\')[1]
-                [System.Security.Principal.NTAccount]$PrinicipalName = $PrinicipalName
-                $SID = $PrinicipalName.Translate([System.Security.Principal.SecurityIdentifier])
-                $SIDRule = New-Object System.Security.AccessControl.RegistryAccessRule($SID, $Rule.RegistryRights.value__, $Rule.InheritanceFlags.value__, $Rule.PropagationFlags.value__, $Rule.AccessControlType.value__)
+                #If failure due to Identity translation issue then create the same rule with the identity as a sid to remove account
+                $SIDRule = ConvertTo-SidIdentityRegistryAccessRule -Rule $Rule
                 $currentAcl.RemoveAccessRule($SIDRule)
             }
             catch
             {
-                $message = $LocalizedData.AclNotFound -f $($Rule.IdentityReference.Value) 
-                Write-Verbose -Message $message 
+                $message = $LocalizedData.AclNotFound -f $($Rule.IdentityReference.Value)
+                Write-Verbose -Message $message
             }
         }
     }
 
-    foreach($Rule in $Expected)
+    foreach ($Rule in $Expected)
     {
-        if($Rule.Match -eq $false)
+        if ($Rule.Match -eq $false)
         {
-            $currentAcl.AddAccessRule($Rule.Rule)
+            try
+            {
+                $currentAcl.AddAccessRule($Rule.Rule)
+            }
+            catch
+            {
+                try
+                {
+                    #If failure due to Identity translation issue then create the same rule with the identity as a sid to remove account
+                    $SIDRule = ConvertTo-SidIdentityRegistryAccessRule -Rule $Rule
+                    $currentAcl.AddAccessRule($Rule.Rule)
+                }
+                catch
+                {
+                    $message = $LocalizedData.AclNotFound -f $($Rule.IdentityReference.Value)
+                    Write-Verbose -Message $message
+                }
+            }
         }
     }
 
@@ -229,7 +243,7 @@ Function Test-TargetResource
         [System.String]
         $Path,
 
-        [Parameter(Mandatory=$true)]
+        [Parameter(Mandatory = $true)]
         [Microsoft.Management.Infrastructure.CimInstance[]]
         $AccessControlList,
 
@@ -240,7 +254,7 @@ Function Test-TargetResource
 
     $ACLRules = @()
 
-    if(-not (Test-Path -Path $Path))
+    if (-not (Test-Path -Path $Path))
     {
         $LocalizedData.ErrorPathNotFound -f $Path | Write-Verbose
         return $true
@@ -248,17 +262,17 @@ Function Test-TargetResource
 
     $currentAcl = Get-Acl -Path $Path
 
-    if($Force)
+    if ($Force)
     {
-        foreach($AccessControlItem in $AccessControlList)
+        foreach ($AccessControlItem in $AccessControlList)
         {
             $Principal = $AccessControlItem.Principal
             $Identity = Resolve-Identity -Identity $Principal
             $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
             $ACLRules += ConvertTo-RegistryAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
-        }    
-        
+        }
+
         $actualAce = $currentAcl.Access
 
         $Results = Compare-RegistryRule -Expected $ACLRules -Actual $actualAce
@@ -269,7 +283,7 @@ Function Test-TargetResource
     }
     else
     {
-        foreach($AccessControlItem in $AccessControlList)
+        foreach ($AccessControlItem in $AccessControlList)
         {
             $Principal = $AccessControlItem.Principal
             $Identity = Resolve-Identity -Identity $Principal
@@ -277,14 +291,14 @@ Function Test-TargetResource
 
             $ACLRules = ConvertTo-RegistryAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
 
-            $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
+            $actualAce = $currentAcl.Access.Where( {$_.IdentityReference -eq $Identity.Name})
 
             $Results = Compare-RegistryRule -Expected $ACLRules -Actual $actualAce
 
             $Expected += $Results.Rules
             $AbsentToBeRemoved += $Results.Absent
 
-            if($AccessControlItem.ForcePrinciPal)
+            if ($AccessControlItem.ForcePrinciPal)
             {
                 $ToBeRemoved += $Results.ToBeRemoved
             }
@@ -292,20 +306,20 @@ Function Test-TargetResource
         }
     }
 
-    foreach($Rule in $Expected)
+    foreach ($Rule in $Expected)
     {
-        if($Rule.Match -eq $false)
+        if ($Rule.Match -eq $false)
         {
             return $false
         }
     }
 
-    if($AbsentToBeRemoved.Count -gt 0)
+    if ($AbsentToBeRemoved.Count -gt 0)
     {
         return $false
     }
 
-    if($ToBeRemoved.Count -gt 0)
+    if ($ToBeRemoved.Count -gt 0)
     {
         return $false
     }
@@ -328,12 +342,12 @@ Function ConvertTo-RegistryAccessRule
 
     $refrenceObject = @()
 
-    foreach($ace in $AccessControlList.AccessControlEntry)
+    foreach ($ace in $AccessControlList.AccessControlEntry)
     {
         $Inheritance = Get-RegistryRuleInheritenceFlag -Inheritance $ace.Inheritance
 
         $rule = [PSCustomObject]@{
-            Rules = New-Object System.Security.AccessControl.RegistryAccessRule($IdentityRef, $ace.Rights, $Inheritance.InheritanceFlag, $Inheritance.PropagationFlag, $ace.AccessControlType)
+            Rules  = New-Object System.Security.AccessControl.RegistryAccessRule($IdentityRef, $ace.Rights, $Inheritance.InheritanceFlag, $Inheritance.PropagationFlag, $ace.AccessControlType)
             Ensure = $ace.Ensure
         }
         $refrenceObject += $rule
@@ -359,43 +373,43 @@ Function Compare-RegistryRule
     $ToBeRemoved = @()
     $AbsentToBeRemoved = @()
 
-    $PresentRules = $Expected.Where({$_.Ensure -eq 'Present'}).Rules
-    $AbsentRules = $Expected.Where({$_.Ensure -eq 'Absent'}).Rules
-    foreach($refrenceObject in $PresentRules)
+    $PresentRules = $Expected.Where( {$_.Ensure -eq 'Present'}).Rules
+    $AbsentRules = $Expected.Where( {$_.Ensure -eq 'Absent'}).Rules
+    foreach ($refrenceObject in $PresentRules)
     {
-        $match = $Actual.Where({
-            $_.RegistryRights -eq $refrenceObject.RegistryRights -and
-            $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
-            $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
-            $_.AccessControlType -eq $refrenceObject.AccessControlType -and
-            $_.IdentityReference -eq $refrenceObject.IdentityReference
-        })
-        if($match.Count -ge 1)
+        $match = $Actual.Where( {
+                $_.RegistryRights -eq $refrenceObject.RegistryRights -and
+                $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
+                $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
+                $_.AccessControlType -eq $refrenceObject.AccessControlType -and
+                $_.IdentityReference -eq $refrenceObject.IdentityReference
+            })
+        if ($match.Count -ge 1)
         {
             $results += [PSCustomObject]@{
-                Rule = $refrenceObject
+                Rule  = $refrenceObject
                 Match = $true
             }
         }
         else
         {
             $results += [PSCustomObject]@{
-                Rule = $refrenceObject
+                Rule  = $refrenceObject
                 Match = $false
             }
         }
     }
 
-    foreach($refrenceObject in $Actual)
+    foreach ($refrenceObject in $Actual)
     {
-        $match = @($Expected.Rules).Where({
-            $_.RegistryRights -eq $refrenceObject.RegistryRights -and
-            $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
-            $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
-            $_.AccessControlType -eq $refrenceObject.AccessControlType -and
-            $_.IdentityReference -eq $refrenceObject.IdentityReference
-        })
-        if($match.Count -eq 0)
+        $match = @($Expected.Rules).Where( {
+                $_.RegistryRights -eq $refrenceObject.RegistryRights -and
+                $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
+                $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
+                $_.AccessControlType -eq $refrenceObject.AccessControlType -and
+                $_.IdentityReference -eq $refrenceObject.IdentityReference
+            })
+        if ($match.Count -eq 0)
         {
             $ToBeRemoved += [PSCustomObject]@{
                 Rule = $refrenceObject
@@ -403,16 +417,16 @@ Function Compare-RegistryRule
         }
     }
 
-    foreach($refrenceObject in $AbsentRules)
+    foreach ($refrenceObject in $AbsentRules)
     {
-        $match = $Actual.Where({
-            $_.RegistryRights -eq $refrenceObject.RegistryRights -and
-            $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
-            $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
-            $_.AccessControlType -eq $refrenceObject.AccessControlType -and
-            $_.IdentityReference -eq $refrenceObject.IdentityReference
-        })
-        if($match.Count -gt 0)
+        $match = $Actual.Where( {
+                $_.RegistryRights -eq $refrenceObject.RegistryRights -and
+                $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
+                $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
+                $_.AccessControlType -eq $refrenceObject.AccessControlType -and
+                $_.IdentityReference -eq $refrenceObject.IdentityReference
+            })
+        if ($match.Count -gt 0)
         {
             $AbsentToBeRemoved += [PSCustomObject]@{
                 Rule = $refrenceObject
@@ -421,9 +435,9 @@ Function Compare-RegistryRule
     }
 
     return [PSCustomObject]@{
-        Rules = $results
+        Rules       = $results
         ToBeRemoved = $ToBeRemoved
-        Absent = $AbsentToBeRemoved
+        Absent      = $AbsentToBeRemoved
     }
 }
 
@@ -437,21 +451,24 @@ Function Get-RegistryRuleInheritenceFlag
         $Inheritance
     )
 
-    switch($Inheritance)
+    switch ($Inheritance)
     {
-        "Key"{
+        "Key"
+        {
             $InheritanceFlag = "0"
             $PropagationFlag = "0"
             break
 
         }
-        "KeySubkeys"{
+        "KeySubkeys"
+        {
             $InheritanceFlag = "1"
             $PropagationFlag = "0"
             break
 
         }
-        "Subkeys"{
+        "Subkeys"
+        {
             $InheritanceFlag = "1"
             $PropagationFlag = "2"
             break
@@ -459,9 +476,9 @@ Function Get-RegistryRuleInheritenceFlag
     }
 
     return [PSCustomObject]@{
-                InheritanceFlag = $InheritanceFlag
-                PropagationFlag = $PropagationFlag
-            }
+        InheritanceFlag = $InheritanceFlag
+        PropagationFlag = $PropagationFlag
+    }
 }
 
 Function Get-RegistryRuleInheritenceName
@@ -479,21 +496,65 @@ Function Get-RegistryRuleInheritenceName
         $PropagationFlag
     )
 
-    switch("$InheritanceFlag-$PropagationFlag")
+    switch ("$InheritanceFlag-$PropagationFlag")
     {
-        "0-0"{
+        "0-0"
+        {
             return "This Key Only"
 
         }
-        "1-0"{
+        "1-0"
+        {
             return "This Key and Subkeys"
 
         }
-        "1-2"{
+        "1-2"
+        {
             return "Subkeys Only"
 
         }
     }
 
     return "none"
+}
+
+<#
+    .SYNOPSIS
+    Takes a Rule object and converts the Principle Name to a SID
+
+    .PARAMETER Rule
+    A single Registry Access Rule to be converted
+
+    .EXAMPLE
+    $sidRule = ConvertTo-SidIdentityRegistryAccessRule -Rule $Rule
+
+    .NOTES
+    This function was created to address translation issues with accounts such as
+    'APPLICATION PACKAGE AUTHORITY\ALL RESTRICTED APPLICATION PACKAGES'.
+#>
+
+function ConvertTo-SidIdentityRegistryAccessRule
+{
+    [CmdletBinding()]
+    [OutputType([System.Security.AccessControl.RegistryAccessRule])]
+    Param
+    (
+        [Parameter(Mandatory = $true)]
+        [System.Security.AccessControl.RegistryAccessRule]
+        $Rule
+    )
+
+    if ($Rule.IdentityReference.Value.Contains('\'))
+    {
+        [System.Security.Principal.NTAccount]$PrinicipalName = $Rule.IdentityReference.Value.split('\')[1]
+    }
+    else
+    {
+        [System.Security.Principal.NTAccount]$PrinicipalName = $Rule.IdentityReference.Value
+    }
+
+    $SID = $PrinicipalName.Translate([System.Security.Principal.SecurityIdentifier])
+    $SIDRule = New-Object System.Security.AccessControl.RegistryAccessRule($SID, $Rule.RegistryRights.value__, $Rule.InheritanceFlags.value__, $Rule.PropagationFlags.value__, $Rule.AccessControlType.value__)
+
+    return $SIDRule
 }
