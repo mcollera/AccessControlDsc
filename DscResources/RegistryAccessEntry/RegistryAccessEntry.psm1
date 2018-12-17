@@ -180,14 +180,14 @@ Function Set-TargetResource
 
     foreach ($Rule in $AbsentToBeRemoved.Rule)
     {
-        $currentAcl.RemoveAccessRule($Rule)
+        $currentAcl.RemoveAccessRuleSpecific($Rule)
     }
 
     foreach ($Rule in $ToBeRemoved.Rule)
     {
         try
         {
-            $currentAcl.RemoveAccessRule($Rule)
+            $currentAcl.RemoveAccessRuleSpecific($Rule)
         }
         catch
         {
@@ -195,7 +195,7 @@ Function Set-TargetResource
             {
                 #If failure due to Identity translation issue then create the same rule with the identity as a sid to remove account
                 $SIDRule = ConvertTo-SidIdentityRegistryAccessRule -Rule $Rule
-                $currentAcl.RemoveAccessRule($SIDRule)
+                $currentAcl.RemoveAccessRuleSpecific($SIDRule)
             }
             catch
             {
