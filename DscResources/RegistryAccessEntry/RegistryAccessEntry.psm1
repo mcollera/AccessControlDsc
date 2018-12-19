@@ -122,6 +122,7 @@ Function Set-TargetResource
     }
 
     $currentAcl = Get-Acl -Path $Path
+
     if ($null -eq $currentAcl)
     {
         $currentAcl = New-Object -TypeName "System.Security.AccessControl.RegistrySecurity"
@@ -134,7 +135,6 @@ Function Set-TargetResource
             $Principal = $AccessControlItem.Principal
             $Identity = Resolve-Identity -Identity $Principal
             $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
-
             $ACLRules += ConvertTo-RegistryAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
         }
 
@@ -154,7 +154,7 @@ Function Set-TargetResource
             $Identity = Resolve-Identity -Identity $Principal
             $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
-            $actualAce = $currentAcl.Access.Where( {$_.IdentityReference -eq $Identity.Name})
+            $actualAce = $currentAcl.Access.Where( {$_.IdentityReference -eq $Identity.Name} )
 
             $ACLRules = ConvertTo-RegistryAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
             $Results = Compare-RegistryRule -Expected $ACLRules -Actual $actualAce
@@ -169,13 +169,27 @@ Function Set-TargetResource
         }
     }
     $isInherited = 0
-    $isInherited += $AbsentToBeRemoved.Rule.Where( {$_.IsInherited -eq $true}).Count
-    $isInherited += $ToBeRemoved.Rule.Where( {$_.IsInherited -eq $true}).Count
+    $isInherited += $AbsentToBeRemoved.Rule.Where( {$_.IsInherited -eq $true} ).Count
+    $isInherited += $ToBeRemoved.Rule.Where( {$_.IsInherited -eq $true} ).Count
 
     if ($isInherited -gt 0)
     {
         $currentAcl.SetAccessRuleProtection($true, $true)
         Set-Acl -Path $Path -AclObject $currentAcl
+        $currentAcl = Get-Acl -Path $Path
+    }
+
+    <#
+        If currentAcl contains an Access Rule for the "APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES" principal
+        and has a RegistryRight that doesn't translate to a correct RegistryRights enum, then remove it and readd
+        the correctly translated Access Rule. This is a workaround for the translation issue with 'ALL APPLICATION PACKAGES'
+    #>
+    $allAppPackagePrincipal = 'APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES'
+    $registryRightsEnum = [enum]::GetValues([System.Security.AccessControl.RegistryRights])
+    $invalidRegRightEnumAllAppPackage = $currentAcl.Where( {$_.IdentityReference -eq $allAppPackagePrincipal -and $registryRightsEnum -notcontains $_.RegistryRights} )
+    if ($null -ne $invalidRegRightEnumAllAppPackage)
+    {
+        $currentAcl = Set-RegistryRightsAclAllAppPackages -AclObject $currentAcl
     }
 
     foreach ($Rule in $AbsentToBeRemoved.Rule)
@@ -291,7 +305,7 @@ Function Test-TargetResource
 
             $ACLRules = ConvertTo-RegistryAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
 
-            $actualAce = $currentAcl.Access.Where( {$_.IdentityReference -eq $Identity.Name})
+            $actualAce = $currentAcl.Access.Where( {$_.IdentityReference -eq $Identity.Name} )
 
             $Results = Compare-RegistryRule -Expected $ACLRules -Actual $actualAce
 
@@ -373,8 +387,8 @@ Function Compare-RegistryRule
     $ToBeRemoved = @()
     $AbsentToBeRemoved = @()
 
-    $PresentRules = $Expected.Where( {$_.Ensure -eq 'Present'}).Rules
-    $AbsentRules = $Expected.Where( {$_.Ensure -eq 'Absent'}).Rules
+    $PresentRules = $Expected.Where( {$_.Ensure -eq 'Present'} ).Rules
+    $AbsentRules = $Expected.Where( {$_.Ensure -eq 'Absent'} ).Rules
     foreach ($refrenceObject in $PresentRules)
     {
         $match = $Actual.Where( {
@@ -554,7 +568,106 @@ function ConvertTo-SidIdentityRegistryAccessRule
     }
 
     $SID = $Principal.Translate([System.Security.Principal.SecurityIdentifier])
-    $SIDRule = New-Object System.Security.AccessControl.RegistryAccessRule($SID, $Rule.RegistryRights.value__, $Rule.InheritanceFlags.value__, $Rule.PropagationFlags.value__, $Rule.AccessControlType.value__)
+    $SIDRule = [System.Security.AccessControl.RegistryAccessRule]::new($SID, $Rule.RegistryRights.value__, $Rule.InheritanceFlags.value__, $Rule.PropagationFlags.value__, $Rule.AccessControlType.value__)
 
     return $SIDRule
+}
+
+<#
+    .SYNOPSIS
+    Takes an ACL that contains the APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES principles with
+    an invalid RegistryRights enumeration and replaces them with their correct versions.
+
+    .PARAMETER AclObject
+    An ACL that contains APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES as the IdentityReference and
+    an invalid RegistryRights value, i.e.: -2147483648 (Generic Read) or 268435456 (Full Control)
+
+    .EXAMPLE
+    $modifiedAcl = Set-AllAppPackagesRegistryRightsAcl -AclObject $currentAcl
+
+    .NOTES
+    This function was created to address translation / ACE removal issues with the
+    'APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES' principal.
+#>
+function Set-RegistryRightsAclAllAppPackages
+{
+    [CmdletBinding()]
+    [OutputType([System.Security.AccessControl.RegistrySecurity])]
+    Param
+    (
+        [Parameter(Mandatory = $true)]
+        [System.Security.AccessControl.RegistrySecurity]
+        $AclObject
+    )
+
+    $data = @{
+        IdentityReference  = 'APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES'
+        RegistryRightEnums = [enum]::GetValues([System.Security.AccessControl.RegistryRights])
+        RegistryRights     = @{
+            FullControl = 268435456
+            ReadKey     = -2147483648
+        }
+    }
+
+    $allAppPackagesRegistryRule = $AclObject.Access.Where( {$_.IdentityReference -eq $data['IdentityReference']} )
+
+    <#
+        In order to remove the invalid RegistryRights ACEs, the RemoveAccessRuleAll method will be used, removing either Allow or Deny entries
+        The end result is AclObject will not have any 'ALL APPLICATION PACKAGES' ACEs, until they are readded in the second switch statement
+        The "ReadKey" Registry Right doesn't matter, however required to create the rule, when using the RemoveAccessRuleAll method,
+        just the SID/Account and AccessControlType (Allow/Deny)
+    #>
+    switch ($allAppPackagesRegistryRule.AccessControlType | Select-Object -Unique)
+    {
+        'Allow'
+        {
+            $removeAllRule = [System.Security.AccessControl.RegistryAccessRule]::new('ALL APPLICATION PACKAGES', 'ReadKey', 0, 0, 'Allow')
+            $AclObject.RemoveAccessRuleAll($removeAllRule)
+        }
+
+        'Deny'
+        {
+            $removeAllRule = [System.Security.AccessControl.RegistryAccessRule]::new('ALL APPLICATION PACKAGES', 'ReadKey', 0, 0, 'Deny')
+            $AclObject.RemoveAccessRuleAll($removeAllRule)
+        }
+    }
+
+    switch ($allAppPackagesRegistryRule)
+    {
+        {
+            $_.IdentityReference -eq $data['IdentityReference'] -and $_.RegistryRights -eq $data['RegistryRights']['FullControl']
+        }
+        {
+            $newRegistryAccessRule = [System.Security.AccessControl.RegistryAccessRule]::new(
+                'ALL APPLICATION PACKAGES',
+                'FullControl',
+                $_.InheritanceFlags,
+                $_.PropagationFlags,
+                $_.AccessControlType
+            )
+            $AclObject.AddAccessRule($newRegistryAccessRule)
+        }
+        {
+            $_.IdentityReference -eq $data['IdentityReference'] -and $_.RegistryRights -eq $data['RegistryRights']['ReadKey']
+        }
+        {
+            $newRegistryAccessRule = [System.Security.AccessControl.RegistryAccessRule]::new(
+                'ALL APPLICATION PACKAGES',
+                'ReadKey',
+                $_.InheritanceFlags,
+                $_.PropagationFlags,
+                $_.AccessControlType
+            )
+            $AclObject.AddAccessRule($newRegistryAccessRule)
+        }
+    }
+
+    $validAccessRules = $allAppPackagesRegistryRule.Where( {$_.IdentityReference -eq $data['IdentityReference'] -and $data['RegistryRightEnums'] -contains $_.RegistryRights} )
+    foreach ($validAccessRule in $validAccessRules)
+    {
+        $convertedValidSidRule = ConvertTo-SidIdentityRegistryAccessRule -Rule $validAccessRule
+        [void]$AclObject.AddAccessRule($convertedValidSidRule)
+    }
+
+    return $AclObject
 }

@@ -51,7 +51,7 @@ Please check out common DSC Resources [contributing guidelines](
 
     * **[String] ObjectType:** Specifies the object type name that identifies the type of child object that can inherit this access rule.
 
-  * [String] ForcePrincipal: Indicates whether the rights for this principal should be forced.  Will remove any rights not explicitly defined in the configuration for the principal.
+  * **[String] ForcePrincipal:** Indicates whether the rights for this principal should be forced.  Will remove any rights not explicitly defined in the configuration for the principal.
 
 #### ActiveDirectoryAccessRule Examples
 
@@ -78,9 +78,9 @@ Please check out common DSC Resources [contributing guidelines](
 
     * **[String] InheritedObjectType:** Specifies the object type name that identifies the type of child object that can inherit this access rule.
 
-  * [String] ForcePrincipal: Indicates whether the rights for this principal should be forced.  Will remove any rights not explicitly defined in the configuration for the principal.
+  * **[String] ForcePrincipal:** Indicates whether the rights for this principal should be forced.  Will remove any rights not explicitly defined in the configuration for the principal.
 
-* [Boolean] Force: Indicates whether the rights defined should be enforced.  Will remove any rights not explicitly defined in the configuration for the path.
+* **[Boolean] Force:** Indicates whether the rights defined should be enforced.  Will remove any rights not explicitly defined in the configuration for the path.
 
 #### ActiveDirectoryAuditRule Examples
 
@@ -105,9 +105,9 @@ Please check out common DSC Resources [contributing guidelines](
 
     * **[String] Inheritance:** Indicates the inheritance type of the permission entry.
 
-  * [String] ForcePrincipal: Indicates whether the rights for this principal should be forced.  Will remove any rights not explicitly defined in the configuration for the principal.
+  * **[String] ForcePrincipal:** Indicates whether the rights for this principal should be forced.  Will remove any rights not explicitly defined in the configuration for the principal.
 
-* [Boolean] Force: Indicates whether the rights defined should be enforced.  Will remove any rights not explicitly defined in the configuration for the path.
+* **[Boolean] Force:** Indicates whether the rights defined should be enforced.  Will remove any rights not explicitly defined in the configuration for the path.
 
 #### NtfsAccessEntry Examples
 
@@ -132,9 +132,9 @@ Please check out common DSC Resources [contributing guidelines](
 
     * **[String] Inheritance:** Indicates the inheritance type of the permission entry. _{ This Key Only | This Key and Subkeys | SubKeys Only }_
 
-  * [String] ForcePrincipal: Indicates whether the rights for this principal should be forced.  Will remove any rights not explicitly defined in the configuration for the principal.
+  * **[String] ForcePrincipal:** Indicates whether the rights for this principal should be forced.  Will remove any rights not explicitly defined in the configuration for the principal.
 
-* [Boolean] Force: Indicates whether the rights defined should be enforced.  Will remove any rights not explicitly defined in the configuration for the path.
+* **[Boolean] Force:** Indicates whether the rights defined should be enforced.  Will remove any rights not explicitly defined in the configuration for the path.
 
 #### RegistryAccessEntry Examples
 
