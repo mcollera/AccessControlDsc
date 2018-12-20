@@ -1369,7 +1369,7 @@ Describe "$DSCResourceName\ResourceHelper\ConvertTo-SID" {
     }
 }
 
-Describe "$DSCResourceName\ResourceHelper\ConvertTo-SidIdentityRegistryAccessRule" {
+Describe "$DSCResourceName\ConvertTo-SidIdentityRegistryAccessRule" {
     Context "RegistryAccessRule IdentityReference to convert is 'APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES'" {
         It "Should convert 'APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES' to S-1-15-2-1 within the RegistryAccessRule" {
             $TempRegistryAccessRule = New-Object System.Security.AccessControl.RegistryAccessRule `
@@ -1408,5 +1408,42 @@ Describe "$DSCResourceName\ResourceHelper\ConvertTo-SidIdentityRegistryAccessRul
             $ConvertedRegistryRule.InheritanceFlags  | Should be 'None'
             $ConvertedRegistryRule.PropagationFlags  | Should be 'None'
         }
+    }
+}
+
+Describe "$DSCResourceName\Set-RegistryRightsAclAllAppPackages" {
+    Context "ALL APPLICATION PACKAGES AccessControlType is 'Allow'" {
+
+        # Creating temp reg key that will have an invalid Registry Access Rule for ALL APPS PACKAGES used for testing
+        $tempRegKeyBasePath = 'HKLM:\Software\Microsoft\Windows NT\CurrentVersion\Winlogon\__Pester__Test__Key__'
+        $tempRegKeyFullPath = $tempRegKeyBasePath + [guid]::NewGuid().Guid
+        $tempRegKeyAcl = New-TempAclItem -Path $tempRegKeyFullPath -DisableInheritance -Force
+        $allAppPackage = 'APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES'
+
+        It "Should have invalid RegistryAccess Rules for 'ALL APPLICATION PACKAGES'" {
+            $invalidAppAccessRule = $tempRegKeyAcl.Access.Where( {
+                    $_.IdentityReference -eq $allAppPackage -and $_.RegistryRights -eq -2147483648
+                })
+            $invalidAppAccessRule.RegistryRights    | Should Be -2147483648
+            $invalidAppAccessRule.IdentityReference | Should Be $allAppPackage
+        }
+
+        It "Should have two 'ALL APPLICATION PACKAGES' Access Rule entries" {
+            $tempRegKeyAcl.Access.Where( {$_.IdentityReference -eq $allAppPackage} ).Count | Should Be 2
+        }
+
+        It "Should remove all 'Allow' RegistryAccess Rules for 'ALL APPLICATION PACKAGES' and reapply only valid RegistryRight types" {
+            $validAppRegKeyAcl = $tempRegKeyAcl.Access.Where( {$_.IdentityReference -eq $allAppPackage -and $_.RegistryRights -ne -2147483648} )
+            $newTempRegKeyAcl = Set-RegistryRightsAclAllAppPackages -AclObject $tempRegKeyAcl
+            $appRegKeyAcl = $newTempRegKeyAcl.Access.Where( {$_.IdentityReference -eq $allAppPackage} )
+            $appRegKeyAcl.Count | Should Be 1
+            $appRegKeyAcl.IdentityReference | Should Be $validAppRegKeyAcl.IdentityReference
+            $appRegKeyAcl.RegistryRights    | Should Be $validAppRegKeyAcl.RegistryRights
+            $appRegKeyAcl.AccessControlType | Should Be $validAppRegKeyAcl.AccessControlType
+            $newTempRegKeyAcl.Access.Where( {$_.IdentityReference -eq $allAppPackage -and $_.RegistryRights -eq -2147483648} ).Count | Should Be 0
+        }
+
+        # Remove temp reg key used for testing
+        Remove-Item -Path $tempRegKeyFullPath
     }
 }

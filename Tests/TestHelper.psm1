@@ -112,22 +112,22 @@ function New-AccessControlList
 <#
     .SYNOPSIS
     Creates an Access Control List Ciminstance
-    
+
     .PARAMETER Principal
-    Name of the principal which access rights are being managed 
-    
+    Name of the principal which access rights are being managed
+
     .PARAMETER ForcePrincipal
         Used to force the desired access rule
-    
+
     .PARAMETER AccessControlType
     States if the principal should be will be allowed or denied access
-    
+
     .PARAMETER FileSystemRights
     What rights the principal is being given over an object
-    
+
     .PARAMETER Inheritance
     The inheritance properties of the object being managed
-    
+
     .PARAMETER Ensure
     Either Present or Absent
 #>
@@ -148,7 +148,7 @@ function New-AccessControlList
         [Parameter(Mandatory = $false)]
         [ValidateSet("ListDirectory", "ReadData", "WriteData", "CreateFiles", "CreateDirectories", "AppendData", "ReadExtendedAttributes", "WriteExtendedAttributes", "Traverse", "ExecuteFile", "DeleteSubdirectoriesAndFiles", "ReadAttributes", "WriteAttributes", "Write", "Delete", "ReadPermissions", "Read", "ReadAndExecute", "Modify", "ChangePermissions", "TakeOwnership", "Synchronize", "FullControl")]
         $FileSystemRights,
-        
+
         [Parameter(Mandatory = $false)]
         [ValidateSet("This Folder Only","This Folder Subfolders and Files","This Folder and Subfolders","This Folder and Files","Subfolders and Files Only","Subfolders Only","Files Only")]
         [String]
@@ -192,22 +192,22 @@ function New-RegistryAccessControlList
 <#
     .SYNOPSIS
         Creates an Access Control List Ciminstance for registry rules
-    
+
     .PARAMETER Principal
-        Name of the principal which access rights are being managed 
-    
+        Name of the principal which access rights are being managed
+
     .PARAMETER ForcePrincipal
         Used to force the desired access rule
-    
+
     .PARAMETER AccessControlType
         States if the principal should be will be allowed or denied access
-    
+
     .PARAMETER RegistryRights
         Rights to be given to a principal over an object
-    
+
     .PARAMETER Inheritance
         The inheritance properties of the object being managed
-    
+
     .PARAMETER Ensure
         Either Present or Absent
 #>
@@ -228,7 +228,7 @@ function New-RegistryAccessControlList
         [Parameter(Mandatory = $false)]
         [ValidateSet("ChangePermissions", "CreateLink", "CreateSubkey", "Delete", "EnumerateSubKeys", "ExecuteKey", "FullControl", "Notify", "QueryValues", "ReadKey", "ReadPermissions", "SetValue", "TakeOwnership", "WriteKey")]
         $RegistryRights,
-        
+
         [Parameter(Mandatory = $false)]
         [ValidateSet("Key", "KeySubkeys", "Subkeys")]
         [String]
@@ -354,7 +354,7 @@ function New-AuditAccessControlList
     Creates an Access Control List Ciminstance
 
     .PARAMETER Principal
-    Name of the principal which access rights are being managed 
+    Name of the principal which access rights are being managed
 
     .PARAMETER ForcePrincipal
         Used to force the desired access rule
@@ -438,7 +438,7 @@ function New-AuditAccessControlList
     Creates an Access Control List Ciminstance
 
     .PARAMETER Principal
-    Name of the principal which access rights are being managed 
+    Name of the principal which access rights are being managed
 
     .PARAMETER ForcePrincipal
         Used to force the desired access rule
@@ -529,4 +529,52 @@ function New-ActiveDirectoryAccessControlList
                         }
     }
     Return $CimAccessControlList
+}
+
+<#
+    .SYNOPSIS
+        Creates a new item and returns the associated Acl Object
+
+    .PARAMETER Path
+        Specifies the path of the location of the new item. Wildcard characters are permitted.
+
+        You can specify the name of the new item in Name , or include it in Path .
+
+    .PARAMETER Force
+        Forces this function to create an item that writes over an existing read-only item. Implementation varies from
+        provider to provider. For more information, see about_Providers. Even using the Force parameter, the function cannot
+        override security restrictions.
+
+    .PARAMETER DisableInheritance
+        Disables inheritance from the newly created item.
+#>
+function New-TempAclItem
+{
+    [CmdletBinding()]
+    Param
+    (
+        [Parameter(Mandatory = $true)]
+        [String]
+        $Path,
+
+        [Parameter()]
+        [Switch]
+        $Force,
+
+        [Parameter()]
+        [Switch]
+        $DisableInheritance
+    )
+
+    $newTempAclItem = New-Item -Path $Path -Force:$Force
+    $newTempAcl = $newTempAclItem.GetAccessControl()
+
+    if ($PSBoundParameters.ContainsKey('DisableInheritance'))
+    {
+        $newTempAcl.SetAccessRuleProtection($true, $true)
+        Set-Acl -Path $Path -AclObject $newTempAcl
+        $newTempAcl = $newTempAclItem.GetAccessControl()
+    }
+
+    return $newTempAcl
 }
