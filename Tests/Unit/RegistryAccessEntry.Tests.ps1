@@ -1446,4 +1446,37 @@ Describe "$DSCResourceName\Set-RegistryRightsAclAllAppPackages" {
         # Remove temp reg key used for testing
         Remove-Item -Path $tempRegKeyFullPath
     }
+
+    Context "ALL APPLICATION PACKAGES AccessControlType is 'Deny'" {
+
+        # Creating temp reg key that will have an invalid Registry Access Rule for ALL APPS PACKAGES used for testing
+        $tempRegKeyBasePath = 'HKLM:\Software\__Pester__Test__Key__'
+        $tempRegKeyFullPath = $tempRegKeyBasePath + [guid]::NewGuid().Guid
+        $tempRegKeyAcl = New-TempAclItem -Path $tempRegKeyFullPath -DisableInheritance -Force
+        $allAppPackage = 'APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES'
+        $tempRegAccess = [System.Security.AccessControl.RegistryAccessRule]::New($allAppPackage.Split('\')[1], 'ReadKey', 0, 0, 'Deny')
+        $tempRegKeyAcl.AddAccessRule($tempRegAccess)
+        Set-Acl -Path $tempRegKeyFullPath -AclObject $tempRegKeyAcl
+        $tempRegKeyAcl = Get-Acl -Path $tempRegKeyFullPath
+
+        It "Should have one 'ALL APPLICATION PACKAGES' Deny Access Rule entry" {
+            $tempRegKeyAcl.Access.Where( {$_.IdentityReference -eq $allAppPackage -and $_.AccessControlType -eq 'Deny'} ).Count | Should Be 1
+        }
+
+        It "Should remove all 'Deny' RegistryAccess Rules for 'ALL APPLICATION PACKAGES' and reapply only valid RegistryRight types" {
+            $validAppRegKeyAcl = $tempRegKeyAcl.Access.Where( {
+                $_.IdentityReference -eq $allAppPackage -and $_.RegistryRights -ne -2147483648 -and $_.AccessControlType -eq 'Deny'
+            })
+            $newTempRegKeyAcl = Set-RegistryRightsAclAllAppPackages -AclObject $tempRegKeyAcl
+            $appRegKeyAcl = $newTempRegKeyAcl.Access.Where( {$_.IdentityReference -eq $allAppPackage -and $_.AccessControlType -eq 'Deny'} )
+            $appRegKeyAcl.Count | Should Be 1
+            $appRegKeyAcl.IdentityReference | Should Be $validAppRegKeyAcl.IdentityReference
+            $appRegKeyAcl.RegistryRights    | Should Be $validAppRegKeyAcl.RegistryRights
+            $appRegKeyAcl.AccessControlType | Should Be 'Deny'
+            $newTempRegKeyAcl.Access.Where( {$_.IdentityReference -eq $allAppPackage -and $_.RegistryRights -eq -2147483648} ).Count | Should Be 0
+        }
+
+        # Remove temp reg key used for testing
+        Remove-Item -Path $tempRegKeyFullPath
+    }
 }
