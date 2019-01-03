@@ -551,6 +551,7 @@ function New-ActiveDirectoryAccessControlList
 function New-TempAclItem
 {
     [CmdletBinding()]
+    [OutputType([System.Object])]
     Param
     (
         [Parameter(Mandatory = $true)]

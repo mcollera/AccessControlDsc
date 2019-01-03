@@ -8,8 +8,8 @@ data LocalizedData
     # culture="en-US"
     ConvertFrom-StringData -StringData @'
         ErrorPathNotFound = The requested path "{0}" cannot be found.
-        AclNotFound = Error obtaining "{0}" ACL
-        AclFound = Obtained "{0}" ACL
+        AclNotFound       = Error obtaining "{0}" ACL
+        AclFound          = Obtained "{0}" ACL
         RemoveAccessError = "Unable to remove Access for "{0}"
 '@
 }

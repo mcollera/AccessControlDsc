@@ -1422,8 +1422,8 @@ Describe "$DSCResourceName\Set-RegistryRightsAclAllAppPackages" {
 
         It "Should have invalid RegistryAccess Rules for 'ALL APPLICATION PACKAGES'" {
             $invalidAppAccessRule = $tempRegKeyAcl.Access.Where( {
-                    $_.IdentityReference -eq $allAppPackage -and $_.RegistryRights -eq -2147483648
-                })
+                $_.IdentityReference -eq $allAppPackage -and $_.RegistryRights -eq -2147483648
+            })
             $invalidAppAccessRule.RegistryRights    | Should Be -2147483648
             $invalidAppAccessRule.IdentityReference | Should Be $allAppPackage
         }
