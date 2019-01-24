@@ -143,6 +143,10 @@ Please check out common DSC Resources [contributing guidelines](
 
 ## Versions
 
+### 1.2.0.0
+
+* Bug Fix [#40](https://github.com/mcollera/AccessControlDsc/issues/40)
+
 ### 1.1.0.0
 
 * Added ActiveDirectoryAccessEntry resource
