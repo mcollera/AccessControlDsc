@@ -106,11 +106,12 @@ Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Absen
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $false -AccessControlType Allow -FileSystemRights ChangePermissions -Inheritance 'This Folder and Files' -Ensure Absent
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
 
-        Set-NewTempItemAcl -ItemType Directory -Path $ContextParams.Path 
+        Set-NewTempItemAcl -ItemType Directory -Path $ContextParams.Path
 
         It 'Should return True' {
             Test-TargetResource @ContextParams | Should Be $true
@@ -121,8 +122,9 @@ Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Absen
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $false -AccessControlType Deny -FileSystemRights ChangePermissions -Inheritance 'This Folder and Files' -Ensure Absent
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
         $TempAccessRules = @(
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
@@ -164,8 +166,9 @@ Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Absen
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $false -AccessControlType Allow -FileSystemRights Modify -Inheritance 'This Folder Only' -Ensure Absent
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
         $TempAccessRules = @(
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
@@ -207,8 +210,9 @@ Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Absen
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $true -Ensure Absent
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
     
         $TempAccessRules = @(
@@ -269,8 +273,9 @@ Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Prese
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $true -AccessControlType Allow -FileSystemRights ReadAndExecute -Inheritance 'This Folder Subfolders and Files' -Ensure Present
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
         $TempAccessRules = @(
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
@@ -312,8 +317,9 @@ Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Prese
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $true -AccessControlType Allow -FileSystemRights @("CreateFiles", "AppendData") -Inheritance 'Subfolders and Files Only' -Ensure Present
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
         $TempAccessRules = @(
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
@@ -337,8 +343,9 @@ Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Prese
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $true -Ensure Present
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
     
         $TempAccessRules = @(
@@ -384,8 +391,9 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Absent
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $true -Ensure Absent
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
         
         $TempAccessRules = @(
@@ -429,8 +437,9 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Absent
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $false -AccessControlType Allow -FileSystemRights ReadAndExecute -Inheritance 'This Folder Subfolders and Files' -Ensure Absent
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
 
         $TempAccessRules = @(
@@ -490,8 +499,9 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Absent
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $false -AccessControlType Allow -FileSystemRights DeleteSubdirectoriesAndFiles -Inheritance 'This Folder Subfolders and Files' -Ensure Absent
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
 
         $TempAccessRules = @(
@@ -550,8 +560,9 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Absent
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $true -AccessControlType Allow -FileSystemRights ReadAndExecute -Inheritance 'This Folder Subfolders and Files' -Ensure Absent
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
 
         $TempAccessRules = @(
@@ -610,8 +621,9 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Absent
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $true -AccessControlType Allow -FileSystemRights Modify -Inheritance 'This Folder Only' -Ensure Absent
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
 
         $TempAccessRules = @(
@@ -662,8 +674,9 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Presen
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $true -Ensure Present
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
     
         $TempAccessRules = @(
@@ -737,8 +750,9 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Presen
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $true -AccessControlType Allow -FileSystemRights 'Modify' -Inheritance 'This Folder Only' -Ensure Present
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
 
         $TempAccessRules = @(
@@ -796,8 +810,9 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Presen
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $false -AccessControlType Allow -FileSystemRights 'Modify' -Inheritance 'This Folder Only' -Ensure Present
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
         $TempAccessRules = @(
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
@@ -854,8 +869,9 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Presen
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $true -AccessControlType Allow -FileSystemRights 'Modify' -Inheritance 'This Folder Only' -Ensure Present
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
 
         $TempAccessRules = @(
@@ -904,8 +920,9 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Presen
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal 'Everyone' -ForcePrincipal $false -AccessControlType Allow -FileSystemRights 'Modify' -Inheritance 'This Folder Only' -Ensure Present
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
 
         $TempAccessRules = @(
@@ -1091,8 +1108,9 @@ Describe "$DSCResourceName\Compare-NtfsRule" {
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights FullControl -Inheritance 'This Folder and Files' -Ensure Absent
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl 
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
 
         $TempAccessRules = @(
@@ -1146,8 +1164,9 @@ Describe "$DSCResourceName\Compare-NtfsRule" {
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $true -AccessControlType Allow -FileSystemRights "ReadAndExecute" -Inheritance "This folder subfolders and files" -Ensure Absent
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl 
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
 
         $TempAccessRules = @(
@@ -1201,8 +1220,9 @@ Describe "$DSCResourceName\Compare-NtfsRule" {
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights "ReadAndExecute" -Inheritance "This folder subfolders and files" -Ensure Present
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl 
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
 
         $TempAccessRules = @(
@@ -1247,8 +1267,9 @@ Describe "$DSCResourceName\Compare-NtfsRule" {
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights "Modify" -Inheritance "This Folder Only" -Ensure Present
         $ContextParams = @{
-            Path = $pathName
-            AccessControlList = $TempAcl 
+            Path               = $pathName
+            AccessControlList  = $TempAcl
+            DisableInheritance = $true
         }
 
         $TempAccessRules = @(
