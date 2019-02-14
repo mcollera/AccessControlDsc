@@ -573,8 +573,8 @@ function New-TempAclItem
     if ($PSBoundParameters.ContainsKey('DisableInheritance'))
     {
         $newTempAcl.SetAccessRuleProtection($true, $true)
-        Set-Acl -Path $Path -AclObject $newTempAcl
-        $newTempAcl = $newTempAclItem.GetAccessControl()
+        $newTempAclItem.SetAccessControl($newTempAcl)
+        $newTempAcl = $newTempAclItem.GetAccessControl('Access')
     }
 
     return $newTempAcl
