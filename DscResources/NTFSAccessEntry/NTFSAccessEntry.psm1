@@ -11,10 +11,10 @@ data LocalizedData
         AclNotFound             = Error obtaining '{0}' ACL.
         AclFound                = Obtained '{0}' ACL.
         RemoveAccessError       = Unable to remove access for '{0}'.
-        ResetDisableInheritance = Disabling inheritance and wiping all existing access rules.
+        ResetDisableInheritance = Disabling inheritance and wiping all existing inherited access rules.
         ActionAdd               = Adding access rule:
         ActionRemove            = Removing access rule:
-        ActionResetAdd          = Resetting access control list and adding access rule:
+        ActionResetAdd          = Resetting explicit access control list and adding access rule:
         ActionNonMatch          = Non-matching permission entry found:
         ActionMissPresent       = Found missing [present] permission rule:
         ActionAbsent            = Found [absent] permission rule:
@@ -143,101 +143,81 @@ Function Set-TargetResource
         {
             if ($Force)
             {
+                # If inheritance is set, disable it and clear inherited access rules
                 if (-not $currentAcl.AreAccessRulesProtected)
                 {
                     Write-Verbose -Message ($LocalizedData['ResetDisableInheritance'])
                     $currentAcl.SetAccessRuleProtection($true, $false)
                 }
 
-                for ($i = 0; $i -le ($AccessControlList.Count -1); $i++)
+                # Removing all access rules to ensure a blank list
+                if ($null -ne $currentAcl.Access)
                 {
-                    $Principal = $AccessControlList[$i].Principal
-                    $Identity = Resolve-Identity -Identity $Principal
-                    $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
-                    $aceRule = ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlList[$i] -IdentityRef $IdentityRef
-                    if ($i -eq 0)
+                    foreach ($ace in $currentAcl.Access)
                     {
-                        Write-CustomVerboseMessage -Action 'ActionResetAdd' -Path $inputPath -Rule $aceRule
-                        $currentAcl.ResetAccessRule($aceRule)
-                    }
-                    else
-                    {
-                        Write-CustomVerboseMessage -Action 'ActionAdd' -Path $inputPath -Rule $aceRule
-                        $currentAcl.AddAccessRule($aceRule)
+                        $currentAcl.RemoveAccessRuleAll($ace)
+                        Write-CustomVerboseMessage -Action 'ActionRemove' -Path $inputPath -Rule $ace
                     }
                 }
-
-                $currentAcl.ResetAccessRule($ACLRules)
-                $fileSystemItem.SetAccessControl($currentAcl)
             }
-            else
+
+            foreach ($AccessControlItem in $AccessControlList)
             {
-                foreach ($AccessControlItem in $AccessControlList)
+                $Principal = $AccessControlItem.Principal
+                $Identity = Resolve-Identity -Identity $Principal
+                $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
+                $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
+                $ACLRules = ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
+                $Results = Compare-NtfsRule -Expected $ACLRules -Actual $actualAce -Force $AccessControlItem.ForcePrincipal
+                $Expected += $Results.Rules
+                $ToBeRemoved += $Results.Absent
+
+                if ($AccessControlItem.ForcePrincipal)
                 {
-                    $Principal = $AccessControlItem.Principal
-                    $Identity = Resolve-Identity -Identity $Principal
-                    $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
-                    $actualAce = $currentAcl.Access.Where( {$_.IdentityReference -eq $Identity.Name})
-                    $ACLRules = ConvertTo-FileSystemAccessRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
-                    $Results = Compare-NtfsRule -Expected $ACLRules -Actual $actualAce -Force $AccessControlItem.ForcePrincipal
-                    $Expected += $Results.Rules
-                    $AbsentToBeRemoved += $Results.Absent
-
-                    if ($AccessControlItem.ForcePrincipal)
-                    {
-                        $ToBeRemoved += $Results.ToBeRemoved
-                    }
+                    $ToBeRemoved += $Results.ToBeRemoved
                 }
+            }
 
-                $isInherited = 0
-                $isInherited += $AbsentToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
-                $isInherited += $ToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
+            $isInherited = $ToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
 
-                if($isInherited -gt 0)
-                {
-                    $currentAcl.SetAccessRuleProtection($true, $true)
-                    $fileSystemItem.SetAccessControl($currentAcl)
-                    $currentAcl = $fileSystemItem.GetAccessControl('Access')
-                }
+            if ($isInherited -gt 0)
+            {
+                $currentAcl.SetAccessRuleProtection($true, $true)
+                $fileSystemItem.SetAccessControl($currentAcl)
+                $currentAcl = $fileSystemItem.GetAccessControl('Access')
+            }
 
-                foreach($Rule in $ToBeRemoved.Rule)
-                {
-                    try
-                    {
-                        Write-CustomVerboseMessage -Action 'ActionRemove' -Path $inputPath -Rule $rule
-                        $currentAcl.RemoveAccessRuleSpecific($Rule)
-                    }
-                    catch
-                    {
-                        try
-                        {
-                            #If failure due to Idenitity translation issue then create the same rule with the identity as a sid to remove account
-                            $SID = ConvertTo-SID -IdentityReference $Rule.IdentityReference.Value
-                            $SIDRule = New-Object System.Security.AccessControl.FileSystemRights($SID, $Rule.FileSystemRights.value__, $Rule.InheritanceFlags.value__, $Rule.PropagationFlags.value__, $Rule.AccessControlType.value__)
-                            Write-CustomVerboseMessage -Action 'ActionRemove' -Path $inputPath -Rule $SIDRule
-                            $currentAcl.RemoveAccessRuleSpecific($SIDRule)
-                        }
-                        catch
-                        {
-                            Write-Verbose -Message ($LocalizedData.AclNotFound -f $($Rule.IdentityReference.Value))
-                        }
-                    }
-                }
-
-                foreach($rule in $AbsentToBeRemoved.Rule)
+            foreach ($rule in $ToBeRemoved.Rule)
+            {
+                try
                 {
                     Write-CustomVerboseMessage -Action 'ActionRemove' -Path $inputPath -Rule $rule
                     $currentAcl.RemoveAccessRuleSpecific($rule)
                 }
-
-                foreach ($rule in $Expected.Rule)
+                catch
                 {
-                    Write-CustomVerboseMessage -Action 'ActionAdd' -Path $inputPath -Rule $rule
-                    $currentAcl.AddAccessRule($rule)
+                    try
+                    {
+                        #If failure due to Idenitity translation issue then create the same rule with the identity as a sid to remove account
+                        $SID = ConvertTo-SID -IdentityReference $Rule.IdentityReference.Value
+                        $SIDRule = New-Object System.Security.AccessControl.FileSystemRights($SID, $Rule.FileSystemRights.value__, $Rule.InheritanceFlags.value__, $Rule.PropagationFlags.value__, $Rule.AccessControlType.value__)
+                        Write-CustomVerboseMessage -Action 'ActionRemove' -Path $inputPath -Rule $SIDRule
+                        $currentAcl.RemoveAccessRuleSpecific($SIDRule)
+                    }
+                    catch
+                    {
+                        Write-Verbose -Message ($LocalizedData.AclNotFound -f $($rule.IdentityReference.Value))
+                    }
                 }
-
-                $fileSystemItem.SetAccessControl($currentAcl)
             }
+
+            foreach ($rule in $Expected.Rule)
+            {
+                Write-CustomVerboseMessage -Action 'ActionAdd' -Path $inputPath -Rule $rule
+                $currentAcl.AddAccessRule($rule)
+            }
+
+            $fileSystemItem.SetAccessControl($currentAcl)
         }
         else
         {
@@ -344,7 +324,7 @@ Function Test-TargetResource
 
             if ($ToBeRemoved.Count -gt 0)
             {
-                foreach ($rule in $ToBeRemoved)
+                foreach ($rule in $ToBeRemoved.Rule)
                 {
                     Write-CustomVerboseMessage -Action 'ActionNonMatch' -Path $inputPath -Rule $rule
                 }
