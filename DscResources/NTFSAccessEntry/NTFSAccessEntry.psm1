@@ -1,29 +1,30 @@
-Import-Module -Name (Join-Path -Path (Split-Path $PSScriptRoot -Parent) `
-                               -ChildPath 'AccessControlResourceHelper\AccessControlResourceHelper.psm1') `
-                               -Force
+$resourceRoot = Split-Path -Path $PSScriptRoot -Parent
+$resourceHelper = Join-Path -Path $resourceRoot -ChildPath 'AccessControlResourceHelper\AccessControlResourceHelper.psm1'
+Import-Module -Name $resourceHelper -Force
 
 # Localized messages
-data LocalizedData
+data localizedData
 {
     # culture = "en-US"
     ConvertFrom-StringData -StringData @'
-        ErrorPathNotFound       = The requested path '{0}' cannot be found.
-        AclNotFound             = Error obtaining '{0}' ACL.
-        AclFound                = Obtained '{0}' ACL.
-        RemoveAccessError       = Unable to remove access for '{0}'.
-        ResetDisableInheritance = Disabling inheritance and wiping all existing inherited access rules.
-        ActionAdd               = Adding access rule:
-        ActionRemove            = Removing access rule:
-        ActionResetAdd          = Resetting explicit access control list and adding access rule:
-        ActionNonMatch          = Non-matching permission entry found:
-        ActionMissPresent       = Found missing [present] permission rule:
-        ActionAbsent            = Found [absent] permission rule:
-        Path                    = > Path              : "{0}"
-        IdentityReference       = > IdentityReference : "{0}"
-        AccessControlType       = > AccessControlType : "{0}"
-        FileSystemRights        = > FileSystemRights  : "{0}"
-        InheritanceFlags        = > InheritanceFlags  : "{0}"
-        PropagationFlags        = > PropagationFlags  : "{0}"
+        ErrorPathNotFound        = The requested path '{0}' cannot be found.
+        AclNotFound              = Error obtaining '{0}' ACL.
+        AclFound                 = Obtained '{0}' ACL.
+        RemoveAccessError        = Unable to remove access for '{0}'.
+        InheritanceDetectedForce = Force set to '{0}', Inheritance detected on path '{1}', returning 'false'
+        ResetDisableInheritance  = Disabling inheritance and wiping all existing inherited access rules.
+        ActionAdd                = Adding access rule:
+        ActionRemove             = Removing access rule:
+        ActionResetAdd           = Resetting explicit access control list and adding access rule:
+        ActionNonMatch           = Non-matching permission entry found:
+        ActionMissPresent        = Found missing [Ensure = Present] permission rule:
+        ActionAbsent             = Found [Ensure = Absent] permission rule:
+        Path                     = > Path              : "{0}"
+        IdentityReference        = > IdentityReference : "{0}"
+        AccessControlType        = > AccessControlType : "{0}"
+        FileSystemRights         = > FileSystemRights  : "{0}"
+        InheritanceFlags         = > InheritanceFlags  : "{0}"
+        PropagationFlags         = > PropagationFlags  : "{0}"
 '@
 }
 
@@ -50,17 +51,17 @@ Function Get-TargetResource
     $cimAccessControlList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
     $inputPath = Get-InputPath($Path)
 
-    if(Test-Path -Path $inputPath)
+    if (Test-Path -Path $inputPath)
     {
         $fileSystemItem = Get-Item -Path $inputPath -ErrorAction Stop
-        $currentACL = $fileSystemItem.GetAccessControl('Access')
+        $currentAcl = $fileSystemItem.GetAccessControl('Access')
 
-        if($null -ne $currentACL)
+        if ($null -ne $currentAcl)
         {
             $message = $localizedData.AclFound -f $inputPath
             Write-Verbose -Message $message
 
-            foreach($principal in $AccessControlList)
+            foreach ($principal in $AccessControlList)
             {
                 $cimAccessControlEntry = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
 
@@ -68,9 +69,9 @@ Function Get-TargetResource
                 $forcePrincipal = $principal.ForcePrincipal
 
                 $identity = Resolve-Identity -Identity $principalName
-                $currentPrincipalAccess = $currentACL.Access.Where({$_.IdentityReference -eq $identity.Name})
+                $currentPrincipalAccess = $currentAcl.Access.Where({$_.IdentityReference -eq $identity.Name})
 
-                foreach($access in $currentPrincipalAccess)
+                foreach ($access in $currentPrincipalAccess)
                 {
                     $accessControlType = $access.AccessControlType.ToString()
                     $fileSystemRights = $access.FileSystemRights.ToString().Split(',').Trim()
@@ -146,7 +147,7 @@ Function Set-TargetResource
                 # If inheritance is set, disable it and clear inherited access rules
                 if (-not $currentAcl.AreAccessRulesProtected)
                 {
-                    Write-Verbose -Message ($localizedData['ResetDisableInheritance'])
+                    Write-Verbose -Message ($localizedData.ResetDisableInheritance)
                     $currentAcl.SetAccessRuleProtection($true, $false)
                 }
 
@@ -257,15 +258,16 @@ Function Test-TargetResource
     if (Test-Path -Path $inputPath)
     {
         $fileSystemItem = Get-Item -Path $inputPath
-        $currentACL = $fileSystemItem.GetAccessControl('Access')
-        $mappedACL = Update-FileSystemRightsMapping($currentAcl)
+        $currentAcl = $fileSystemItem.GetAccessControl('Access')
+        $mappedAcl = Update-FileSystemRightsMapping($currentAcl)
 
-        if ($null -ne $currentACL)
+        if ($null -ne $currentAcl)
         {
             if ($Force)
             {
-                if ($acl.AreAccessRulesProtected -eq $false)
+                if ($currentAcl.AreAccessRulesProtected -eq $false)
                 {
+                    Write-Verbose -Message ($localizedData.InheritanceDetectedForce -f $Force, $inputPath)
                     return $false
                 }
 
@@ -277,7 +279,7 @@ Function Test-TargetResource
                     $aclRules += ConvertTo-FileSystemAccessRule -AccessControlList $accessControlItem -IdentityRef $identityRef
                 }
 
-                $actualAce = $mappedACL.Access
+                $actualAce = $mappedAcl.Access
                 $results = Compare-NtfsRule -Expected $aclRules -Actual $actualAce -Force $accessControlItem.ForcePrincipal
                 $expected = $results.Rules
                 $absentToBeRemoved = $results.Absent
@@ -291,7 +293,7 @@ Function Test-TargetResource
                     $identity = Resolve-Identity -Identity $principal
                     $identityRef = New-Object System.Security.Principal.NTAccount($identity.Name)
                     $aclRules = ConvertTo-FileSystemAccessRule -AccessControlList $accessControlItem -IdentityRef $identityRef
-                    $actualAce = $mappedACL.Access.Where( {$_.IdentityReference -eq $identity.Name})
+                    $actualAce = $mappedAcl.Access.Where({$_.IdentityReference -eq $identity.Name})
                     $results = Compare-NtfsRule -Expected $aclRules -Actual $actualAce -Force $accessControlItem.ForcePrincipal
                     $expected += $results.Rules
                     $absentToBeRemoved += $results.Absent
@@ -314,7 +316,7 @@ Function Test-TargetResource
 
             if ($absentToBeRemoved.Count -gt 0)
             {
-                foreach ($rule in $absentToBeRemoved)
+                foreach ($rule in $absentToBeRemoved.Rule)
                 {
                     Write-CustomVerboseMessage -Action 'ActionAbsent' -Path $inputPath -Rule $rule
                 }
@@ -462,13 +464,13 @@ Function ConvertTo-FileSystemAccessRule
         $IdentityRef
     )
 
-    $refrenceObject = @()
+    $referenceRule = @()
 
-    foreach($ace in $AccessControlList.AccessControlEntry)
+    foreach ($ace in $AccessControlList.AccessControlEntry)
     {
         $inheritance = Get-NtfsInheritenceFlag -Inheritance $ace.Inheritance
         $rule = [PSCustomObject]@{
-            Rules  = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            Rules = New-Object System.Security.AccessControl.FileSystemAccessRule(
                 $IdentityRef,
                 $ace.FileSystemRights,
                 $Inheritance.InheritanceFlag,
@@ -478,10 +480,10 @@ Function ConvertTo-FileSystemAccessRule
             Ensure = $ace.Ensure
         }
 
-        $refrenceObject += $rule
+        $referenceRule += $rule
     }
 
-    return $refrenceObject
+    return $referenceRule
 }
 
 Function Compare-NtfsRule
@@ -505,72 +507,48 @@ Function Compare-NtfsRule
     $toBeRemoved = @()
     $absentToBeRemoved = @()
     $presentRules = $Expected.Where({$_.Ensure -eq 'Present'}).Rules
-    $absentRules = $Expected.Where( {$_.Ensure -eq 'Absent'}).Rules
+    $absentRules = $Expected.Where({$_.Ensure -eq 'Absent'}).Rules
 
-    foreach($refrenceObject in $presentRules)
+    foreach ($referenceRule in $PresentRules)
     {
-        $match = $Actual.Where({
-            (((($_.FileSystemRights.value__ -band $refrenceObject.FileSystemRights.value__) `
-                -match "$($_.FileSystemRights.value__)|$($refrenceObject.FileSystemRights.value__)") -and !$Force) `
-                -or ($_.FileSystemRights -eq $refrenceObject.FileSystemRights -and $Force)) `
-                -and $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags `
-                -and $_.PropagationFlags -eq $refrenceObject.PropagationFlags `
-                -and $_.AccessControlType -eq $refrenceObject.AccessControlType `
-                -and $_.IdentityReference -eq $refrenceObject.IdentityReference
-        })
+        $match = Test-FileSystemRightsRuleMatch -ReferenceRule $referenceRule -DifferenceRule $Actual -Force $Force
 
-        if($match.Count -ge 1)
+        if ($match.Count -ge 1)
         {
             $results += [PSCustomObject]@{
-                Rule = $refrenceObject
+                Rule = $referenceRule
                 Match = $true
             }
         }
         else
         {
             $results += [PSCustomObject]@{
-                Rule = $refrenceObject
+                Rule = $referenceRule
                 Match = $false
             }
         }
     }
 
-    foreach($refrenceObject in $AbsentRules)
+    foreach ($referenceRule in $AbsentRules)
     {
-        $match = $Actual.Where({
-            (((($_.FileSystemRights.value__ -band $refrenceObject.FileSystemRights.value__) -match
-            "$($_.FileSystemRights.value__)|$($refrenceObject.FileSystemRights.value__)") -and !$Force) -or
-            ($_.FileSystemRights -eq $refrenceObject.FileSystemRights -and $Force)) -and
-            $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
-            $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
-            $_.AccessControlType -eq $refrenceObject.AccessControlType -and
-            $_.IdentityReference -eq $refrenceObject.IdentityReference
-        })
+        $match = Test-FileSystemRightsRuleMatch -ReferenceRule $referenceRule -DifferenceRule $Actual -Force $Force
 
-        if($match.Count -gt 0)
+        if ($match.Count -gt 0)
         {
             $absentToBeRemoved += [PSCustomObject]@{
-                Rule = $refrenceObject
+                Rule = $match
             }
         }
     }
 
-    foreach($refrenceObject in $Actual)
+    foreach ($referenceRule in $Actual)
     {
-        $match = @($Expected.Rules).Where({
-            (((($_.FileSystemRights.value__ -band $refrenceObject.FileSystemRights.value__) -match
-            "$($_.FileSystemRights.value__)|$($refrenceObject.FileSystemRights.value__)") -and !$Force) -or
-            ($_.FileSystemRights -eq $refrenceObject.FileSystemRights -and $Force)) -and
-            $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
-            $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
-            $_.AccessControlType -eq $refrenceObject.AccessControlType -and
-            $_.IdentityReference -eq $refrenceObject.IdentityReference
-        })
+        $match = Test-FileSystemRightsRuleMatch -ReferenceRule $referenceRule -DifferenceRule $Expected.Rules -Force $Force
 
-        if($match.Count -eq 0)
+        if ($match.Count -eq 0)
         {
             $toBeRemoved += [PSCustomObject]@{
-                Rule = $refrenceObject
+                Rule = $referenceRule
             }
         }
     }
@@ -591,10 +569,10 @@ Function Update-FileSystemRightsMapping
         $Ace
     )
 
-    foreach($rule in $Ace.Access)
+    foreach ($rule in $Ace.Access)
     {
         $rightsBand = [int]0xf0000000 -band $rule.FileSystemRights.value__
-        if(($rightsBand -gt 0) -or ($rightsBand -lt 0))
+        if (($rightsBand -gt 0) -or ($rightsBand -lt 0))
         {
             $sid = ConvertTo-SID -IdentityReference $rule.IdentityReference
             $mappedRight = Get-MappedGenericRight($rule.FileSystemRights)
@@ -741,11 +719,58 @@ function Write-CustomVerboseMessage
     )
 
     Write-Verbose -Message $localizedData[$Action]
-    Write-Verbose -Message ($localizedData['Path'] -f $Path)
+    Write-Verbose -Message ($localizedData.Path -f $Path)
 
     foreach ($property in $properties)
     {
         $message = $localizedData[$property] -f $Rule.$property
         Write-Verbose -Message $message
+    }
+}
+
+function Test-FileSystemRightsRuleMatch
+{
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [System.Security.AccessControl.FileSystemAccessRule[]]
+        [AllowEmptyCollection()]
+        $DifferenceRule,
+
+        [Parameter(Mandatory = $true)]
+        [System.Security.AccessControl.FileSystemAccessRule]
+        $ReferenceRule,
+
+        [Parameter(Mandatory = $true)]
+        [bool]
+        $Force
+    )
+
+    if ($Force)
+    {
+        $DifferenceRule.Where({
+                $_.FileSystemRights -eq $ReferenceRule.FileSystemRights -and
+                $_.InheritanceFlags -eq $ReferenceRule.InheritanceFlags -and
+                $_.PropagationFlags -eq $ReferenceRule.PropagationFlags -and
+                $_.AccessControlType -eq $ReferenceRule.AccessControlType -and
+                $_.IdentityReference -eq $ReferenceRule.IdentityReference
+            })
+    }
+    else
+    {
+        $DifferenceRule.Where({
+                ($_.FileSystemRights.value__ -band $ReferenceRule.FileSystemRights.value__) -match
+                "$($_.FileSystemRights.value__)|$($ReferenceRule.FileSystemRights.value__)" -and
+                (($_.InheritanceFlags.value__ -eq 3 -and $ReferenceRule.InheritanceFlags.value__ -in 1..3) -or
+                ($_.InheritanceFlags.value__ -eq 2 -and $ReferenceRule.InheritanceFlags.value__ -eq 2) -or
+                ($_.InheritanceFlags.value__ -eq 1 -and $ReferenceRule.InheritanceFlags.value__ -eq 1) -or
+                ($_.InheritanceFlags.value__ -eq 0 -and $ReferenceRule.InheritanceFlags.value__ -eq 0)) -and
+                (($_.PropagationFlags.value__ -eq 3 -and $ReferenceRule.PropagationFlags.value__ -in 1..3) -or
+                ($_.PropagationFlags.value__ -eq 2 -and $ReferenceRule.PropagationFlags.value__ -eq 2) -or
+                ($_.PropagationFlags.value__ -eq 1 -and $ReferenceRule.PropagationFlags.value__ -eq 1) -or
+                ($_.PropagationFlags.value__ -eq 0 -and $ReferenceRule.PropagationFlags.value__ -eq 0)) -and
+                $_.AccessControlType -eq $ReferenceRule.AccessControlType -and
+                $_.IdentityReference -eq $ReferenceRule.IdentityReference
+            })
     }
 }
