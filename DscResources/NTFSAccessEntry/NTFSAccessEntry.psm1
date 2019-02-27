@@ -140,6 +140,7 @@ Function Set-TargetResource
     {
         $fileSystemItem = Get-Item -Path $inputPath
         $currentAcl = $fileSystemItem.GetAccessControl('Access')
+
         if ($null -ne $currentAcl)
         {
             if ($Force)
@@ -345,7 +346,7 @@ Function Test-TargetResource
         Write-Verbose -Message ($localizedData.ErrorPathNotFound -f $inputPath)
         $inDesiredState = $false
     }
-
+    
     return $inDesiredState
 }
 
@@ -600,7 +601,7 @@ Function Update-FileSystemRightsMapping
                 )
                 $Ace.RemoveAccessRule($sidRule)
             }
-
+            
             $Ace.AddAccessRule($mappedRule)
         }
     }
@@ -771,6 +772,6 @@ function Test-FileSystemRightsRuleMatch
                 ($_.PropagationFlags.value__ -eq 0 -and $ReferenceRule.PropagationFlags.value__ -eq 0)) -and
                 $_.AccessControlType -eq $ReferenceRule.AccessControlType -and
                 $_.IdentityReference -eq $ReferenceRule.IdentityReference
-            })
+        })
     }
 }
