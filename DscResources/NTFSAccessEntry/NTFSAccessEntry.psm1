@@ -511,19 +511,23 @@ Function Compare-NtfsRule
 
     foreach ($referenceRule in $PresentRules)
     {
-        $match = Test-FileSystemRightsRuleMatch -ReferenceRule $referenceRule -DifferenceRule $Actual -Force $Force
+        $match = Test-FileSystemAccessRuleMatch -ReferenceRule $referenceRule -DifferenceRule $Actual -Force $Force
 
-        if ($match.Count -ge 1)
+        if
+        (
+            ($match.Count -ge 1) -and
+            ($match.FileSystemRights.value__ -ge $referenceRule.FileSystemRights.value__)
+        )
         {
             $results += [PSCustomObject]@{
-                Rule = $referenceRule
+                Rule  = $referenceRule
                 Match = $true
             }
         }
         else
         {
             $results += [PSCustomObject]@{
-                Rule = $referenceRule
+                Rule  = $referenceRule
                 Match = $false
             }
         }
@@ -531,7 +535,7 @@ Function Compare-NtfsRule
 
     foreach ($referenceRule in $AbsentRules)
     {
-        $match = Test-FileSystemRightsRuleMatch -ReferenceRule $referenceRule -DifferenceRule $Actual -Force $Force
+        $match = Test-FileSystemAccessRuleMatch -ReferenceRule $referenceRule -DifferenceRule $Actual -Force $Force
 
         if ($match.Count -gt 0)
         {
@@ -543,7 +547,7 @@ Function Compare-NtfsRule
 
     foreach ($referenceRule in $Actual)
     {
-        $match = Test-FileSystemRightsRuleMatch -ReferenceRule $referenceRule -DifferenceRule $Expected.Rules -Force $Force
+        $match = Test-FileSystemAccessRuleMatch -ReferenceRule $referenceRule -DifferenceRule $Expected.Rules -Force $Force
 
         if ($match.Count -eq 0)
         {
@@ -614,7 +618,7 @@ Function Get-MappedGenericRight
     (
         [Parameter(Mandatory = $true)]
         [int]
-        $rights
+        $Rights
     )
 
     [int]$genericRead = 0x80000000
@@ -648,22 +652,22 @@ Function Get-MappedGenericRight
     [int]$fsarGenericFullControl = [System.Security.AccessControl.FileSystemRights]::FullControl
     $fsarRights = 0
 
-    if (($rights -band $genericRead) -eq $genericRead)
+    if (($Rights -band $genericRead) -eq $genericRead)
     {
         $fsarRights = $fsarRights -bor $fsarGenericRead
     }
 
-    if (($rights -band $genericWrite) -eq $genericWrite)
+    if (($Rights -band $genericWrite) -eq $genericWrite)
     {
         $fsarRights = $fsarRights -bor  $fsarGenericWrite
     }
 
-    if (($rights -band $genericExecute) -eq $genericExecute)
+    if (($Rights -band $genericExecute) -eq $genericExecute)
     {
         $fsarRights = $fsarRights -bor  $fsarGenericExecute
     }
 
-    if (($rights -band $genericFullControl) -eq $genericFullControl)
+    if (($Rights -band $genericFullControl) -eq $genericFullControl)
     {
         $fsarRights = $fsarRights -bor  $fsarGenericFullControl
     }
@@ -673,7 +677,7 @@ Function Get-MappedGenericRight
         return $fsarRights
     }
 
-    return $rights
+    return $Rights
 }
 
 Function Get-InputPath
@@ -728,7 +732,7 @@ function Write-CustomVerboseMessage
     }
 }
 
-function Test-FileSystemRightsRuleMatch
+function Test-FileSystemAccessRuleMatch
 {
     param
     (
@@ -762,13 +766,11 @@ function Test-FileSystemRightsRuleMatch
                 ($_.FileSystemRights.value__ -band $ReferenceRule.FileSystemRights.value__) -match
                 "$($_.FileSystemRights.value__)|$($ReferenceRule.FileSystemRights.value__)" -and
                 (($_.InheritanceFlags.value__ -eq 3 -and $ReferenceRule.InheritanceFlags.value__ -in 1..3) -or
-                ($_.InheritanceFlags.value__ -eq 2 -and $ReferenceRule.InheritanceFlags.value__ -eq 2) -or
-                ($_.InheritanceFlags.value__ -eq 1 -and $ReferenceRule.InheritanceFlags.value__ -eq 1) -or
-                ($_.InheritanceFlags.value__ -eq 0 -and $ReferenceRule.InheritanceFlags.value__ -eq 0)) -and
+                ($_.InheritanceFlags.value__ -in 1..3 -and $ReferenceRule.InheritanceFlags.value__ -eq 0) -or
+                ($_.InheritanceFlags.value__ -eq $ReferenceRule.InheritanceFlags.value__)) -and
                 (($_.PropagationFlags.value__ -eq 3 -and $ReferenceRule.PropagationFlags.value__ -in 1..3) -or
-                ($_.PropagationFlags.value__ -eq 2 -and $ReferenceRule.PropagationFlags.value__ -eq 2) -or
-                ($_.PropagationFlags.value__ -eq 1 -and $ReferenceRule.PropagationFlags.value__ -eq 1) -or
-                ($_.PropagationFlags.value__ -eq 0 -and $ReferenceRule.PropagationFlags.value__ -eq 0)) -and
+                ($_.PropagationFlags.value__ -in 1..3 -and $ReferenceRule.PropagationFlags.value__ -eq 0) -or
+                ($_.PropagationFlags.value__ -eq $ReferenceRule.PropagationFlags.value__)) -and
                 $_.AccessControlType -eq $ReferenceRule.AccessControlType -and
                 $_.IdentityReference -eq $ReferenceRule.IdentityReference
             })
