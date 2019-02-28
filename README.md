@@ -146,6 +146,7 @@ Please check out common DSC Resources [contributing guidelines](
 ### 1.3.0.0
 
 * Bug Fix [#44](https://github.com/mcollera/AccessControlDsc/issues/44)
+* Bug Fix [#46](https://github.com/mcollera/AccessControlDsc/issues/46)
 
 ### 1.2.0.0
 
