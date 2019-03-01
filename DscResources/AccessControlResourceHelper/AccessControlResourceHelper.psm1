@@ -1,8 +1,11 @@
+
+$script:localizedData = Import-LocalizedData -BaseDirectory $PSScriptRoot -UICulture $PSUICulture -FileName 'AccessControlResourceHelper.strings.psd1'
+
 function Resolve-Identity
 {
     <#
         .SYNOPSIS
-            Resolves the principal name SID 
+            Resolves the principal name SID
 
         .PARAMETER Identity
             Specifies the identity of the principal.
@@ -24,7 +27,7 @@ function Resolve-Identity
 
         $tryNTService = $false
 
-        try 
+        try
         {
             if ($Identity -match '^S-\d-(\d+-){1,14}\d+$')
             {
@@ -58,12 +61,12 @@ function Resolve-Identity
                 [System.Security.Principal.NTAccount]$Id = "NT Service\" + $Identity
                 $SID = $Id.Translate([System.Security.Principal.SecurityIdentifier])
                 $NTAccount = $SID.Translate([System.Security.Principal.NTAccount])
-                
+
                 $Principal = [PSCustomObject]@{
                     Name = $NTAccount.Value
                     SID = $SID.Value
                 }
-    
+
                 return $Principal
             }
             catch
@@ -71,7 +74,7 @@ function Resolve-Identity
                 $ErrorMessage = "Could not resolve identity '{0}': '{1}'." -f $Identity, $_.Exception.Message
                 Write-Error -Exception $_.Exception -Message $ErrorMessage
             }
-        }        
+        }
     }
 }
 
@@ -80,7 +83,7 @@ function Resolve-Identity
     Takes identity name and translates to SID
 
     .PARAMETER IdentityReference
-    System.Security.Principal.NTAccount object 
+    System.Security.Principal.NTAccount object
 
     .EXAMPLE
     $IdentityReference = (Get-Acl -Path C:\temp).access[0].IdentityReference
@@ -96,19 +99,19 @@ function ConvertTo-SID
         $IdentityReference
     )
 
-    try 
+    try
     {
         If($IdentityReference.Contains("\"))
         {
             $IdentityReference = $IdentityReference.split('\')[1]
         }
-        
+
         [System.Security.Principal.NTAccount]$PrinicipalName = $IdentityReference
         $SID = $PrinicipalName.Translate([System.Security.Principal.SecurityIdentifier])
-    
+
         Return $SID
     }
-    catch 
+    catch
     {
         # Probably NT Service which needs domain portion to translate without error
         [System.Security.Principal.NTAccount]$Id = "NT Service\" + $IdentityReference
@@ -116,7 +119,7 @@ function ConvertTo-SID
 
         return $SID
     }
-    
+
 }
 
 function Assert-Module
@@ -136,11 +139,11 @@ function Assert-Module
         $errorMessage = $localizedString.RoleNotFoundError -f $ModuleName;
         ThrowInvalidOperationError -ErrorId $errorId -ErrorMessage $errorMessage;
     }
-} 
+}
 
 function Get-DelegationRightsGuid
 {
-    Param 
+    Param
     (
         [Parameter()]
         [string]
@@ -152,10 +155,10 @@ function Get-DelegationRightsGuid
         # Create a hashtable to store the GUID value of each schemaGuids and rightsGuids
         $guidmap = @{}
         $rootdse = Get-ADRootDSE
-        Get-ADObject -SearchBase ($rootdse.SchemaNamingContext) -LDAPFilter "(schemaidguid=*)" -Properties Name,schemaIDGUID | 
+        Get-ADObject -SearchBase ($rootdse.SchemaNamingContext) -LDAPFilter "(schemaidguid=*)" -Properties Name,schemaIDGUID |
             Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.schemaIDGUID }
 
-        Get-ADObject -SearchBase ($rootdse.ConfigurationNamingContext) -LDAPFilter "(&(objectclass=controlAccessRight)(rightsguid=*))" -Properties Name,rightsGuid | 
+        Get-ADObject -SearchBase ($rootdse.ConfigurationNamingContext) -LDAPFilter "(&(objectclass=controlAccessRight)(rightsguid=*))" -Properties Name,rightsGuid |
             Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.rightsGuid }
 
         return [system.guid]$guidmap[$ObjectName]
@@ -179,10 +182,10 @@ function Get-SchemaObjectName
     {
         $guidmap = @{}
         $rootdse = Get-ADRootDSE
-        Get-ADObject -SearchBase ($rootdse.SchemaNamingContext) -LDAPFilter "(schemaidguid=*)" -Properties Name,schemaIDGUID | 
+        Get-ADObject -SearchBase ($rootdse.SchemaNamingContext) -LDAPFilter "(schemaidguid=*)" -Properties Name,schemaIDGUID |
             Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.schemaIDGUID }
 
-        Get-ADObject -SearchBase ($rootdse.ConfigurationNamingContext) -LDAPFilter "(&(objectclass=controlAccessRight)(rightsguid=*))" -Properties Name,rightsGuid | 
+        Get-ADObject -SearchBase ($rootdse.ConfigurationNamingContext) -LDAPFilter "(&(objectclass=controlAccessRight)(rightsguid=*))" -Properties Name,rightsGuid |
             Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.rightsGuid }
 
         # This is to address the edge case where one guid resolves to multiple names ex. f3a64788-5306-11d1-a9c5-0000f80367c1 resolves to Service-Principal-Name,Validated-SPN
@@ -192,5 +195,67 @@ function Get-SchemaObjectName
     else
     {
         return "none"
+    }
+}
+
+function Write-CustomVerboseMessage
+{
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $Action,
+
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $Path,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateScript({
+            $_ -is [System.DirectoryServices.ActiveDirectoryAccessRule] -or
+            $_ -is [System.DirectoryServices.ActiveDirectoryAuditRule] -or
+            $_ -is [System.Security.AccessControl.FileSystemAccessRule]
+        })]
+        $Rule
+    )
+
+    $properties = [ordered]@{
+        IdentityReference = $Rule.IdentityReference
+        AccessControlType = $Rule.AccessControlType
+    }
+
+    switch ($Rule.GetType().Name)
+    {
+        'ActiveDirectoryAccessRule'
+        {
+            # future expansion
+            break
+        }
+
+        'ActiveDirectoryAuditRule'
+        {
+            $properties.Add('ActiveDirectoryRights', $Rule.ActiveDirectoryRights)
+            $properties.Add('AuditFlags', $Rule.AuditFlags)
+            $properties.Add('InheritanceType', $Rule.InheritanceType)
+            $properties.Add('InheritedObjectType', (Get-SchemaObjectName -SchemaIdGuid $Rule.InheritedObjectType))
+            $properties.Add('ObjectType', (Get-SchemaObjectName -SchemaIdGuid $Rule.ObjectType))
+            break
+        }
+
+        'FileSystemAccessRule'
+        {
+            $properties.Add('FileSystemRights', $Rule.FileSystemRights)
+            $properties.Add('InheritanceFlags', $Rule.InheritanceFlags)
+            $properties.Add('PropagationFlags', $Rule.PropagationFlags)
+            break
+        }
+    }
+
+    Write-Verbose -Message $localizedData[$Action] -Verbose
+    Write-Verbose -Message ($localizedData.Path -f $Path) -Verbose
+
+    foreach ($property in $properties.Keys -as [array])
+    {
+        Write-Verbose -Message ($localizedData[$property] -f $properties[$property]) -Verbose
     }
 }

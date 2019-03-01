@@ -32,10 +32,10 @@ Function Get-TargetResource
         [bool]
         $Force = $false
     )
-    
+
     Assert-Module -ModuleName 'ActiveDirectory'
     Import-Module -Name 'ActiveDirectory' -Verbose:$false
-    
+
     $NameSpace = "root/Microsoft/Windows/DesiredStateConfiguration"
     $CimAccessControlList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
 
@@ -49,7 +49,7 @@ Function Get-TargetResource
         {
             $message = $LocalizedData.AclFound -f $Path
             Write-Verbose -Message $message
-            
+
             foreach($Principal in $AccessControlList)
             {
                 $CimAccessControlEntry = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
@@ -122,12 +122,12 @@ Function Set-TargetResource
         [bool]
         $Force = $false
     )
- 
+
     Assert-Module -ModuleName 'ActiveDirectory'
     Import-Module -Name 'ActiveDirectory' -Verbose:$false
- 
+
     $Path = Join-Path -Path "ad:\" -ChildPath $DistinguishedName
-    
+
     if(Test-Path -Path $Path)
     {
         $currentAcl = Get-Acl -Path $Path -Audit
@@ -142,8 +142,8 @@ Function Set-TargetResource
                     $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
                     $ACLRules += ConvertTo-ActiveDirectoryAuditRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
-                }    
-        
+                }
+
                 $actualAce = $currentAcl.Audit
 
                 $Results = Compare-ActiveDirectoryAuditRule -Expected $ACLRules -Actual $actualAce
@@ -227,7 +227,7 @@ Function Set-TargetResource
                 ("> ActiveDirectoryRights : '{0}'" -f $NonMatch.ActiveDirectoryRights),
                 ("> AuditFlags            : '{0}'" -f $NonMatch.AuditFlags),
                 ("> InheritanceType       : '{0}'" -f $NonMatch.InheritanceType),
-                ("> InheritedObjectType : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType)) |
+                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType)) |
                 Write-Verbose
                 $currentAcl.RemoveAuditRule($Rule.Rule)
             }
@@ -271,7 +271,7 @@ Function Test-TargetResource
 
     $InDesiredState = $True
     $Path = Join-Path -Path "ad:\" -ChildPath $DistinguishedName
-    
+
     if(Test-Path -Path $Path)
     {
         $currentACL = Get-Acl -Path $Path -Audit
@@ -287,8 +287,8 @@ Function Test-TargetResource
                     $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
 
                     $ACLRules += ConvertTo-ActiveDirectoryAuditRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
-                }    
-        
+                }
+
                 $actualAce = $currentAcl.Audit
 
                 $Results = Compare-ActiveDirectoryAuditRule -Expected $ACLRules -Actual $actualAce
@@ -385,7 +385,7 @@ Function Test-TargetResource
         Write-Verbose -Message $Message
         $InDesiredState = $False
     }
-    
+
     return $InDesiredState
 }
 

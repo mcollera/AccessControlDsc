@@ -1,9 +1,10 @@
 [ClassVersion("0.9.0.0")]
 class ActiveDirectoryAuditRule
 {
-    [Required, Description("Specifies the conditions for auditing attempts to access a securable object."), ValueMap{"Success","Failure"}, Values{"Success","Failure"}] String AuditFlags;    
+    [Required, Description("Specifies the conditions for auditing attempts to access a securable object."), ValueMap{"Success","Failure"}, Values{"Success","Failure"}] String AuditFlags;
     [Required, Description("Specifies the access rights that are assigned to an Active Directory Domain Services object."), ValueMap{"AccessSystemSecurity","CreateChild","Delete","DeleteChild","DeleteTree","ExtendedRight","GenericAll","GenericExecute","GenericRead","GenericWrite","ListChildren","ListObject","ReadControl","ReadProperty","Self","WriteDacl","WriteOwner","WriteProperty"}, Values{"AccessSystemSecurity","CreateChild","Delete","DeleteChild","DeleteTree","ExtendedRight","GenericAll","GenericExecute","GenericRead","GenericWrite","ListChildren","ListObject","ReadControl","ReadProperty","Self","WriteDacl","WriteOwner","WriteProperty"}] String ActiveDirectoryRights[];
     [Write, Description("Specifies if, and how, ACE information is applied to an object and its descendents."), ValueMap{"1","4","2","0","3"}, Values{"All","Children","Descendents","None","SelfAndChildren"}] String InheritanceType;
+    [Write, Description("Specifies the schema GUID of the object to which the access rule applies.")] String ObjectType;
     [Write, Description("Specifies the object type name that identifies the type of child object that can inherit this access rule.")] String InheritedObjectType;
     [Required, ValueMap{"Present", "Absent"},Values{"Present", "Absent"}] String Ensure;
 };

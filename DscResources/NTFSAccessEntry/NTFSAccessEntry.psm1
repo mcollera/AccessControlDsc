@@ -1,32 +1,10 @@
-$resourceRoot = Split-Path -Path $PSScriptRoot -Parent
-$resourceHelper = Join-Path -Path $resourceRoot -ChildPath 'AccessControlResourceHelper\AccessControlResourceHelper.psm1'
-Import-Module -Name $resourceHelper -Force
+$resourceRootPath = Split-Path -Path $PSScriptRoot -Parent
+$resourceHelperPath = Join-Path -Path $resourceRootPath -ChildPath 'AccessControlResourceHelper'
+$resourceHelperPsm1 = Join-Path -Path $resourceHelperPath -ChildPath 'AccessControlResourceHelper.psm1'
+Import-Module -Name $resourceHelperPsm1 -Force
 
-# Localized messages
-data localizedData
-{
-    # culture = "en-US"
-    ConvertFrom-StringData -StringData @'
-        ErrorPathNotFound        = The requested path '{0}' cannot be found.
-        AclNotFound              = Error obtaining '{0}' ACL.
-        AclFound                 = Obtained '{0}' ACL.
-        RemoveAccessError        = Unable to remove access for '{0}'.
-        InheritanceDetectedForce = Force set to '{0}', Inheritance detected on path '{1}', returning 'false'
-        ResetDisableInheritance  = Disabling inheritance and wiping all existing inherited access rules.
-        ActionAdd                = Adding access rule:
-        ActionRemove             = Removing access rule:
-        ActionResetAdd           = Resetting explicit access control list and adding access rule:
-        ActionNonMatch           = Non-matching permission entry found:
-        ActionMissPresent        = Found missing [Ensure = Present] permission rule:
-        ActionAbsent             = Found [Ensure = Absent] permission rule:
-        Path                     = > Path              : "{0}"
-        IdentityReference        = > IdentityReference : "{0}"
-        AccessControlType        = > AccessControlType : "{0}"
-        FileSystemRights         = > FileSystemRights  : "{0}"
-        InheritanceFlags         = > InheritanceFlags  : "{0}"
-        PropagationFlags         = > PropagationFlags  : "{0}"
-'@
-}
+$script:localizedData = Import-LocalizedData -BaseDirectory $resourceHelperPath -UICulture $PSUICulture -FileName 'AccessControlResourceHelper.strings.psd1'
+
 
 Function Get-TargetResource
 {
@@ -158,7 +136,7 @@ Function Set-TargetResource
                     foreach ($ace in $currentAcl.Access)
                     {
                         $currentAcl.RemoveAccessRuleAll($ace)
-                        Write-CustomVerboseMessage -Action 'ActionRemove' -Path $inputPath -Rule $ace
+                        Write-CustomVerboseMessage -Action 'ActionRemoveAccess' -Path $inputPath -Rule $ace
                     }
                 }
             }
@@ -193,7 +171,7 @@ Function Set-TargetResource
             {
                 try
                 {
-                    Write-CustomVerboseMessage -Action 'ActionRemove' -Path $inputPath -Rule $rule
+                    Write-CustomVerboseMessage -Action 'ActionRemoveAccess' -Path $inputPath -Rule $rule
                     $currentAcl.RemoveAccessRuleSpecific($rule)
                 }
                 catch
@@ -203,7 +181,7 @@ Function Set-TargetResource
                         #If failure due to Idenitity translation issue then create the same rule with the identity as a sid to remove account
                         $sid = ConvertTo-SID -IdentityReference $rule.IdentityReference.Value
                         $sidRule = New-Object System.Security.AccessControl.FileSystemRights($sid, $rule.FileSystemRights.value__, $rule.InheritanceFlags.value__, $rule.PropagationFlags.value__, $rule.AccessControlType.value__)
-                        Write-CustomVerboseMessage -Action 'ActionRemove' -Path $inputPath -Rule $sidRule
+                        Write-CustomVerboseMessage -Action 'ActionRemoveAccess' -Path $inputPath -Rule $sidRule
                         $currentAcl.RemoveAccessRuleSpecific($sidRule)
                     }
                     catch
@@ -215,7 +193,7 @@ Function Set-TargetResource
 
             foreach ($rule in $expected.Rule)
             {
-                Write-CustomVerboseMessage -Action 'ActionAdd' -Path $inputPath -Rule $rule
+                Write-CustomVerboseMessage -Action 'ActionAddAccess' -Path $inputPath -Rule $rule
                 $currentAcl.AddAccessRule($rule)
             }
 
@@ -310,7 +288,7 @@ Function Test-TargetResource
             {
                 if ($rule.Match -eq $false)
                 {
-                    Write-CustomVerboseMessage -Action 'ActionMissPresent' -Path $inputPath -Rule $rule.rule
+                    Write-CustomVerboseMessage -Action 'ActionMissPresentPerm' -Path $inputPath -Rule $rule.rule
                     $inDesiredState = $false
                 }
             }
@@ -319,7 +297,7 @@ Function Test-TargetResource
             {
                 foreach ($rule in $absentToBeRemoved.Rule)
                 {
-                    Write-CustomVerboseMessage -Action 'ActionAbsent' -Path $inputPath -Rule $rule
+                    Write-CustomVerboseMessage -Action 'ActionAbsentPermission' -Path $inputPath -Rule $rule
                 }
 
                 $inDesiredState = $false
@@ -329,7 +307,7 @@ Function Test-TargetResource
             {
                 foreach ($rule in $toBeRemoved.Rule)
                 {
-                    Write-CustomVerboseMessage -Action 'ActionNonMatch' -Path $inputPath -Rule $rule
+                    Write-CustomVerboseMessage -Action 'ActionNonMatchPermission' -Path $inputPath -Rule $rule
                 }
 
                 $inDesiredState = $false
@@ -346,7 +324,7 @@ Function Test-TargetResource
         Write-Verbose -Message ($localizedData.ErrorPathNotFound -f $inputPath)
         $inDesiredState = $false
     }
-    
+
     return $inDesiredState
 }
 
@@ -605,7 +583,7 @@ Function Update-FileSystemRightsMapping
                 )
                 $Ace.RemoveAccessRule($sidRule)
             }
-            
+
             $Ace.AddAccessRule($mappedRule)
         }
     }
@@ -696,41 +674,6 @@ Function Get-InputPath
     $returnPath = [System.Environment]::ExpandEnvironmentVariables($Path)
 
     return $returnPath
-}
-
-function Write-CustomVerboseMessage
-{
-    param
-    (
-        [Parameter(Mandatory = $true)]
-        [System.String]
-        $Action,
-
-        [Parameter(Mandatory = $true)]
-        [System.String]
-        $Path,
-
-        [Parameter(Mandatory = $true)]
-        [System.Security.AccessControl.FileSystemAccessRule]
-        $Rule
-    )
-
-    $properties = @(
-        'IdentityReference',
-        'AccessControlType',
-        'FileSystemRights',
-        'InheritanceFlags',
-        'PropagationFlags'
-    )
-
-    Write-Verbose -Message $localizedData[$Action]
-    Write-Verbose -Message ($localizedData.Path -f $Path)
-
-    foreach ($property in $properties)
-    {
-        $message = $localizedData[$property] -f $Rule.$property
-        Write-Verbose -Message $message
-    }
 }
 
 function Test-FileSystemAccessRuleMatch
