@@ -3,7 +3,28 @@ $resourceHelperPath = Join-Path -Path $resourceRootPath -ChildPath 'AccessContro
 $resourceHelperPsm1 = Join-Path -Path $resourceHelperPath -ChildPath 'AccessControlResourceHelper.psm1'
 Import-Module -Name $resourceHelperPsm1 -Force
 
-$script:localizedData = Import-LocalizedData -BaseDirectory $resourceHelperPath -UICulture $PSUICulture -FileName 'AccessControlResourceHelper.strings.psd1'
+try
+{
+    $importLocalizedDataParams = @{
+        BaseDirectory = $resourceHelperPath
+        UICulture     = $PSUICulture
+        FileName      = 'AccessControlResourceHelper.strings.psd1'
+        ErrorAction   = 'Stop'
+    }
+    $script:localizedData = Import-LocalizedData @importLocalizedDataParams
+}
+catch
+{
+    $importLocalizedDataParams.UICulture = 'en-US'
+    try
+    {
+        $script:localizedData = Import-LocalizedData @importLocalizedDataParams
+    }
+    catch
+    {
+        throw 'Unable to load localized data'
+    }
+}
 
 
 Function Get-TargetResource
