@@ -51,7 +51,7 @@ Function Get-TargetResource
     $nameSpace = "root/Microsoft/Windows/DesiredStateConfiguration"
     $cimAccessControlList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
 
-    $path = Join-Path -Path "ad:\" -ChildPath $DistinguishedName
+    $path = Join-Path -Path "AD:\" -ChildPath $DistinguishedName
 
     if (Test-Path -Path $path)
     {
@@ -72,7 +72,7 @@ Function Get-TargetResource
                 $identity = Resolve-Identity -Identity $principalName
                 $currentPrincipalAccess = $currentACL.Audit.Where({$_.IdentityReference -eq $identity.Name})
 
-                foreach($access in $currentPrincipalAccess)
+                foreach ($access in $currentPrincipalAccess)
                 {
                     $auditFlags = $access.AuditFlags.ToString()
                     $activeDirectoryRights = $access.ActiveDirectoryRights.ToString().Split(',').Trim()
@@ -169,7 +169,7 @@ Function Set-TargetResource
                 }
             }
 
-            foreach($accessControlItem in $AccessControlList)
+            foreach ($accessControlItem in $AccessControlList)
             {
                 $principal = $accessControlItem.Principal
                 $identity = Resolve-Identity -Identity $principal
@@ -180,7 +180,7 @@ Function Set-TargetResource
                 $expected += $results.Rules
                 $toBeRemoved += $results.Absent
 
-                if($accessControlItem.ForcePrinciPal)
+                if ($accessControlItem.ForcePrinciPal)
                 {
                     $toBeRemoved += $results.ToBeRemoved
                 }
@@ -188,14 +188,14 @@ Function Set-TargetResource
 
             $isInherited = $toBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
 
-            if($isInherited -gt 0)
+            if ($isInherited -gt 0)
             {
                 $currentAcl.SetAuditRuleProtection($true,$true)
                 Set-Acl -Path $path -AclObject $currentAcl
                 $currentAcl = Get-Acl -Path $path -Audit
             }
 
-            foreach($rule in $expected)
+            foreach ($rule in $expected)
             {
                 if ($rule.Match -eq $false)
                 {
@@ -204,7 +204,7 @@ Function Set-TargetResource
                 }
             }
 
-            foreach($rule in $toBeRemoved.Rule)
+            foreach ($rule in $toBeRemoved.Rule)
             {
                 $ruleRemoval = $currentAcl.RemoveAuditRule($rule)
                 if (-not $ruleRemoval)
@@ -254,7 +254,7 @@ Function Test-TargetResource
     $inDesiredState = $true
     $path = Join-Path -Path "AD:\" -ChildPath $DistinguishedName
 
-    if(Test-Path -Path $path)
+    if (Test-Path -Path $path)
     {
         $currentACL = Get-Acl -Path $path -Audit
 
