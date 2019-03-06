@@ -5,7 +5,7 @@ ConvertFrom-StringData -StringData @'
     RemoveAccessError        = Unable to remove access for '{0}'.
     RemoveAuditError         = Unable to remove audit for '{0}'.
     InheritanceDetectedForce = Force set to '{0}', Inheritance detected on path '{1}', returning 'false'
-    ResetDisableInheritance  = Disabling inheritance and wiping all existing inherited access rules.
+    ResetDisableInheritance  = Disabling inheritance and wiping all existing inherited rules.
     ActionAddAccess          = Adding access rule:
     ActionAddAudit           = Adding audit rule:
     ActionRemoveAccess       = Removing access rule:
@@ -25,6 +25,7 @@ ConvertFrom-StringData -StringData @'
     InheritanceFlags         = > InheritanceFlags      : '{0}'
     PropagationFlags         = > PropagationFlags      : '{0}'
     AuditFlags               = > AuditFlags            : '{0}'
+    ObjectType               = > ObjectType            : '{0}'
     InheritanceType          = > InheritanceType       : '{0}'
     InheritedObjectType      = > InheritedObjectType   : '{0}'
 '@

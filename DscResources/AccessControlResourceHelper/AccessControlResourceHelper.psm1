@@ -1,5 +1,25 @@
-
-$script:localizedData = Import-LocalizedData -BaseDirectory $PSScriptRoot -UICulture $PSUICulture -FileName 'AccessControlResourceHelper.strings.psd1'
+try
+{
+    $importLocalizedDataParams = @{
+        BaseDirectory = $PSScriptRoot
+        UICulture     = $PSUICulture
+        FileName      = 'AccessControlResourceHelper.strings.psd1'
+        ErrorAction   = 'Stop'
+    }
+    $script:localizedData = Import-LocalizedData @importLocalizedDataParams
+}
+catch
+{
+    $importLocalizedDataParams.UICulture = 'en-US'
+    try
+    {
+        $script:localizedData = Import-LocalizedData @importLocalizedDataParams
+    }
+    catch
+    {
+        throw 'Unable to load localized data'
+    }
+}
 
 function Resolve-Identity
 {
@@ -150,22 +170,22 @@ function Get-DelegationRightsGuid
         $ObjectName
     )
 
-    if($ObjectName)
+    if ($ObjectName)
     {
         # Create a hashtable to store the GUID value of each schemaGuids and rightsGuids
         $guidmap = @{}
         $rootdse = Get-ADRootDSE
         Get-ADObject -SearchBase ($rootdse.SchemaNamingContext) -LDAPFilter "(schemaidguid=*)" -Properties Name,schemaIDGUID |
-            Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.schemaIDGUID }
+            Foreach-Object -Process {$guidmap[$_.Name] = [System.GUID]$_.schemaIDGUID}
 
         Get-ADObject -SearchBase ($rootdse.ConfigurationNamingContext) -LDAPFilter "(&(objectclass=controlAccessRight)(rightsguid=*))" -Properties Name,rightsGuid |
-            Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.rightsGuid }
+            Foreach-Object -Process {$guidmap[$_.Name] = [System.GUID]$_.rightsGuid}
 
         return [system.guid]$guidmap[$ObjectName]
     }
     else
     {
-        return [system.guid]"00000000-0000-0000-0000-000000000000"
+        return [system.guid]'00000000-0000-0000-0000-000000000000'
     }
 }
 
@@ -178,23 +198,23 @@ function Get-SchemaObjectName
         $SchemaIdGuid
     )
 
-    if($SchemaIdGuid)
+    if ($SchemaIdGuid -and ($SchemaIdGuid.Guid -ne '00000000-0000-0000-0000-000000000000'))
     {
         $guidmap = @{}
         $rootdse = Get-ADRootDSE
         Get-ADObject -SearchBase ($rootdse.SchemaNamingContext) -LDAPFilter "(schemaidguid=*)" -Properties Name,schemaIDGUID |
-            Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.schemaIDGUID }
+            Foreach-Object -Process {$guidmap[$_.Name] = [System.GUID]$_.schemaIDGUID}
 
         Get-ADObject -SearchBase ($rootdse.ConfigurationNamingContext) -LDAPFilter "(&(objectclass=controlAccessRight)(rightsguid=*))" -Properties Name,rightsGuid |
-            Foreach-Object -Process { $guidmap[$_.Name] = [System.GUID]$_.rightsGuid }
+            Foreach-Object -Process {$guidmap[$_.Name] = [System.GUID]$_.rightsGuid}
 
         # This is to address the edge case where one guid resolves to multiple names ex. f3a64788-5306-11d1-a9c5-0000f80367c1 resolves to Service-Principal-Name,Validated-SPN
-        $names = ( $guidmap.GetEnumerator() | Where-Object -FilterScript { $_.Value -eq $SchemaIdGuid } ).Name
+        $names = ($guidmap.GetEnumerator() | Where-Object -FilterScript {$_.Value -eq $SchemaIdGuid}).Name
         return $names -join ','
     }
     else
     {
-        return "none"
+        return 'None'
     }
 }
 
@@ -221,7 +241,6 @@ function Write-CustomVerboseMessage
 
     $properties = [ordered]@{
         IdentityReference = $Rule.IdentityReference
-        AccessControlType = $Rule.AccessControlType
     }
 
     switch ($Rule.GetType().Name)
@@ -236,14 +255,15 @@ function Write-CustomVerboseMessage
         {
             $properties.Add('ActiveDirectoryRights', $Rule.ActiveDirectoryRights)
             $properties.Add('AuditFlags', $Rule.AuditFlags)
+            $properties.Add('ObjectType', $(Get-SchemaObjectName -SchemaIdGuid $Rule.ObjectType))
             $properties.Add('InheritanceType', $Rule.InheritanceType)
-            $properties.Add('InheritedObjectType', (Get-SchemaObjectName -SchemaIdGuid $Rule.InheritedObjectType))
-            $properties.Add('ObjectType', (Get-SchemaObjectName -SchemaIdGuid $Rule.ObjectType))
+            $properties.Add('InheritedObjectType', $(Get-SchemaObjectName -SchemaIdGuid $Rule.InheritedObjectType))
             break
         }
 
         'FileSystemAccessRule'
         {
+            $properties.Add('AccessControlType', $Rule.AccessControlType)
             $properties.Add('FileSystemRights', $Rule.FileSystemRights)
             $properties.Add('InheritanceFlags', $Rule.InheritanceFlags)
             $properties.Add('PropagationFlags', $Rule.PropagationFlags)
