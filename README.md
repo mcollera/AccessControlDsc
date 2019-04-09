@@ -143,6 +143,10 @@ Please check out common DSC Resources [contributing guidelines](
 
 ## Versions
 
+### 1.3.1.0
+
+* BugFix remove git file from published module.
+
 ### 1.3.0.0
 
 * Bug Fix [#44](https://github.com/mcollera/AccessControlDsc/issues/44)
