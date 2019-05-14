@@ -349,65 +349,6 @@ Function Test-TargetResource
     return $inDesiredState
 }
 
-Function Get-NtfsInheritenceFlag
-{
-    [CmdletBinding()]
-    param
-    (
-        [Parameter(Mandatory = $true)]
-        [System.String]
-        $Inheritance
-    )
-
-    switch($Inheritance)
-    {
-        "This folder only"{
-            $InheritanceFlag = "0"
-            $PropagationFlag = "0"
-            break
-
-        }
-        "This folder subfolders and files"{
-            $InheritanceFlag = "3"
-            $PropagationFlag = "0"
-            break
-
-        }
-        "This folder and subfolders"{
-            $InheritanceFlag = "1"
-            $PropagationFlag = "0"
-            break
-        }
-        "This folder and files"{
-            $InheritanceFlag = "2"
-            $PropagationFlag = "0"
-            break
-
-        }
-        "Subfolders and files only"{
-            $InheritanceFlag = "3"
-            $PropagationFlag = "2"
-            break
-
-        }
-        "Subfolders only"{
-            $InheritanceFlag = "1"
-            $PropagationFlag = "2"
-            break
-        }
-        "Files only"{
-            $InheritanceFlag = "2"
-            $PropagationFlag = "2"
-            break
-        }
-    }
-
-    return [PSCustomObject]@{
-        InheritanceFlag = $InheritanceFlag
-        PropagationFlag = $PropagationFlag
-    }
-}
-
 Function Get-NtfsInheritenceName
 {
     [CmdletBinding()]
