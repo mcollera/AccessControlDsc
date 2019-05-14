@@ -381,3 +381,20 @@ Function Get-NtfsInheritenceName
 
     return "none"
 }
+
+function Get-InputPath
+{
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $Path
+    )
+
+    $returnPath = $Path
+
+    # If Path has a environment variable, convert it to a locally usable path
+    $returnPath = [System.Environment]::ExpandEnvironmentVariables($Path)
+
+    return $returnPath
+}
