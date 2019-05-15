@@ -234,7 +234,8 @@ function Write-CustomVerboseMessage
         [ValidateScript({
             $_ -is [System.DirectoryServices.ActiveDirectoryAccessRule] -or
             $_ -is [System.DirectoryServices.ActiveDirectoryAuditRule] -or
-            $_ -is [System.Security.AccessControl.FileSystemAccessRule]
+            $_ -is [System.Security.AccessControl.FileSystemAccessRule] -or
+            $_ -is [System.Security.AccessControl.AuditRule]
         })]
         $Rule
     )
@@ -265,6 +266,14 @@ function Write-CustomVerboseMessage
         {
             $properties.Add('AccessControlType', $Rule.AccessControlType)
             $properties.Add('FileSystemRights', $Rule.FileSystemRights)
+            $properties.Add('InheritanceFlags', $Rule.InheritanceFlags)
+            $properties.Add('PropagationFlags', $Rule.PropagationFlags)
+            break
+        }
+        'FileSystemAuditRule'
+        {
+            $properties.Add('FileSystemRights', $Rule.FileSystemRights)
+            $properties.Add('AuditFlags', $Rule.AuditFlags)
             $properties.Add('InheritanceFlags', $Rule.InheritanceFlags)
             $properties.Add('PropagationFlags', $Rule.PropagationFlags)
             break

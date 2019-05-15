@@ -103,7 +103,7 @@ function Get-TargetResource
     $returnValue = @{
         Force = $Force
         Path = $inputPath
-        FileSystemAuditRuleList = $cimfileSystemAuditRuleList
+        AuditRuleList = $cimfileSystemAuditRuleList
     }
 
     return $returnValue
@@ -127,10 +127,14 @@ function Set-TargetResource
         [bool]
         $Force = $false
     )
-    # AccessControlList
+
     if (Test-Path -Path $path)
     {
-        $currentAcl = Get-Acl -Path $path -Audit
+        #$currentAcl = Get-Acl -Path $path -Audit
+        $currentAcl =  (Get-Item -Path $path).GetAccessControl('Access')
+        $auditRules = $currentAcl.GetAuditRules($true,$true,[System.Security.Principal.NTAccount])
+        $currentAcl | Add-Member -MemberType NoteProperty -Value $auditRules -Name Audit
+
         if ($null -ne $currentAcl)
         {
             if ($Force)
@@ -157,13 +161,13 @@ function Set-TargetResource
                 }
             }
 
-            foreach ($accessControlItem in $AuditRuleList)
+            foreach ($auditRuleItem in $AuditRuleList)
             {
-                $principal = $accessControlItem.Principal
+                $principal = $auditRuleItem.Principal
                 $identity = Resolve-Identity -Identity $principal
                 $identityRef = New-Object System.Security.Principal.NTAccount($identity.Name)
                 $actualAce = $currentAcl.Audit.Where({$_.IdentityReference -eq $identity.Name})
-                $aclRules = ConvertTo-FileSystemAuditRule -AuditRuleList $accessControlItem -IdentityRef $identityRef
+                $aclRules = ConvertTo-FileSystemAuditRule -AuditRuleList $auditRuleItem -IdentityRef $identityRef
                 $results = Compare-FileSystemAuditRule -Expected $aclRules -Actual $actualAce
                 $expected += $results.Rules
                 $toBeRemoved += $results.Absent
@@ -250,16 +254,16 @@ function Test-TargetResource
                 return $false
             }
 
-            foreach ($accessControlItem in $AuditRuleList)
+            foreach ($auditRuleItem in $AuditRuleList)
             {
-                $principal = $accessControlItem.Principal
+                $principal = $auditRuleItem.Principal
                 $identity = Resolve-Identity -Identity $principal
                 $identityRef = New-Object System.Security.Principal.NTAccount($identity.Name)
-                $aclRules += ConvertTo-FileSystemAuditRule -AccessControlList $accessControlItem -IdentityRef $identityRef
+                $aclRules += ConvertTo-FileSystemAuditRule -AuditRuleList $auditRuleItem -IdentityRef $identityRef
             }
 
             $actualAce = $currentAuditAcl.Audit
-            $results = Compare-FileSystemAuditRule -Expected $aclRules -Actual $actualAce -Force $accessControlItem.ForcePrincipal
+            $results = Compare-FileSystemAuditRule -Expected $aclRules -Actual $actualAce -Force $auditRuleItem.ForcePrincipal
             $expected = $results.Rules
             $absentToBeRemoved = $results.Absent
             $toBeRemoved = $results.ToBeRemoved
@@ -298,7 +302,7 @@ function Test-TargetResource
         {
             foreach ($rule in $absentToBeRemoved.Rule)
             {
-                Write-CustomVerboseMessage -Action 'ActionAbsentPermission' -Path $inputPath -Rule $rule
+                Write-CustomVerboseMessage -Action 'ActionAbsentPermission' -Path $Path -Rule $rule
             }
 
             $inDesiredState = $false
@@ -307,7 +311,7 @@ function Test-TargetResource
         {
             foreach ($rule in $toBeRemoved.Rule)
             {
-                Write-CustomVerboseMessage -Action 'ActionNonMatchPermission' -Path $inputPath -Rule $rule
+                Write-CustomVerboseMessage -Action 'ActionNonMatchPermission' -Path $Path -Rule $rule
             }
 
             $inDesiredState = $false
@@ -337,7 +341,7 @@ function ConvertTo-FileSystemAuditRule
 
     $referenceRule = @()
 
-    foreach ($ace in $AuditRuleList.FileSystemAuditRule)
+    foreach ($ace in $AuditRuleList.AuditRuleEntry)
     {
         $inheritance = Get-NtfsInheritenceFlag -Inheritance $ace.Inheritance
         $rule = [PSCustomObject]@{
