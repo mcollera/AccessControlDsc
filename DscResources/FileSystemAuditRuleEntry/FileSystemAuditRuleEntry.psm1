@@ -127,6 +127,94 @@ function Set-TargetResource
         [bool]
         $Force = $false
     )
+    # AccessControlList
+    if (Test-Path -Path $path)
+    {
+        $currentAcl = Get-Acl -Path $path -Audit
+        if ($null -ne $currentAcl)
+        {
+            if ($Force)
+            {
+                # If inheritance is set, disable it and clear inherited audit rules
+                if (-not $currentAcl.AreAuditRulesProtected)
+                {
+                    $currentAcl.SetAuditRuleProtection($true, $false)
+                    Write-Verbose -Message ($localizedData.ResetDisableInheritance)
+                }
+
+                # Removing all audit rules to ensure a blank list
+                if ($null -ne $currentAcl.Audit)
+                {
+                    foreach ($rule in $currentAcl.Audit)
+                    {
+                        $ruleRemoval = $currentAcl.RemoveAuditRule($rule)
+                        if (-not $ruleRemoval)
+                        {
+                            $currentAcl.RemoveAuditRuleSpecific($rule)
+                        }
+                        Write-CustomVerboseMessage -Action 'ActionRemoveAudit' -Path $path -Rule $rule
+                    }
+                }
+            }
+
+            foreach ($accessControlItem in $AuditRuleList)
+            {
+                $principal = $accessControlItem.Principal
+                $identity = Resolve-Identity -Identity $principal
+                $identityRef = New-Object System.Security.Principal.NTAccount($identity.Name)
+                $actualAce = $currentAcl.Audit.Where({$_.IdentityReference -eq $identity.Name})
+                $aclRules = ConvertTo-FileSystemAuditRule -AuditRuleList $accessControlItem -IdentityRef $identityRef
+                $results = Compare-FileSystemAuditRule -Expected $aclRules -Actual $actualAce
+                $expected += $results.Rules
+                $toBeRemoved += $results.Absent
+
+                if ($accessControlItem.ForcePrinciPal)
+                {
+                    $toBeRemoved += $results.ToBeRemoved
+                }
+            }
+
+            $isInherited = $toBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
+
+            if ($isInherited -gt 0)
+            {
+                $currentAcl.SetAuditRuleProtection($true,$true)
+                Set-Acl -Path $path -AclObject $currentAcl
+                $currentAcl = Get-Acl -Path $path -Audit
+            }
+
+            foreach ($rule in $expected)
+            {
+                if ($rule.Match -eq $false)
+                {
+                    $currentAcl.AddAuditRule($rule.Rule)
+                    Write-CustomVerboseMessage -Action 'ActionAddAudit' -Path $path -Rule $rule.Rule
+                }
+            }
+
+            foreach ($rule in $toBeRemoved.Rule)
+            {
+                $ruleRemoval = $currentAcl.RemoveAuditRule($rule)
+                if (-not $ruleRemoval)
+                {
+                    $currentAcl.RemoveAuditRuleSpecific($rule)
+                }
+                Write-CustomVerboseMessage -Action 'ActionRemoveAudit' -Path $path -Rule $rule
+            }
+
+            Set-Acl -Path $path -AclObject $currentAcl
+        }
+        else
+        {
+            $message = $localizedData.AclNotFound -f $path
+            Write-Verbose -Message $message
+        }
+    }
+    else
+    {
+        $message = $localizedData.ErrorPathNotFound -f $path
+        Write-Verbose -Message $message
+    }
 }
 
 function Test-TargetResource
