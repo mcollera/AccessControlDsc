@@ -11,7 +11,7 @@ class FileSystemAuditRule
 class FileSystemAuditRuleList
 {
     [Required, Description("Indicates the identity of the principal.")] String Principal;
-    [Write, Description("Indicates whether the rights for this principal should be forced. Will remove any rights not explicitly defined in the configuration for the principal.")] Boolean ForcePrincipal;
+    [Required, Description("Indicates whether the rights for this principal should be forced. Will remove any rights not explicitly defined in the configuration for the principal.")] Boolean ForcePrincipal;
     [Required, Description("Indicates the audit rule entry in the form of an array of instances of the FileSystemAuditRule CIM class."), EmbeddedInstance("FileSystemAuditRule")] String AuditRuleEntry[];
 };
 

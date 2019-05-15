@@ -49,7 +49,7 @@ function Get-TargetResource
     {
         #$fileSystemItem = Get-Item -Path $inputPath -ErrorAction Stop
         #$currentAcl = $fileSystemItem.GetAccessControl('Audit')
-        $currentAcl = Get-Acl -Path $inputPath -Audit        
+        $currentAcl = Get-Acl -Path $inputPath -Audit
 
         if ($null -ne $currentAcl)
         {
@@ -83,7 +83,7 @@ function Get-TargetResource
                 $cimFileSystemAuditRuleList += New-CimInstance -ClientOnly -Namespace $nameSpace -ClassName FileSystemAuditRuleList -Property @{
                     Principal = $principalName
                     ForcePrincipal = $forcePrincipal
-                    FileSystemAuditRule = [Microsoft.Management.Infrastructure.CimInstance[]]@($cimFileSystemAuditRule)
+                    AuditRuleEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($cimFileSystemAuditRule)
                 }
             }
 
