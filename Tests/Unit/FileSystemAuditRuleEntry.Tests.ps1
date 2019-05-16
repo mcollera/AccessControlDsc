@@ -1,27 +1,6 @@
-<#
-    .SYNOPSIS
-        Template for creating DSC Resource Unit Tests
-
-    .DESCRIPTION
-        To Use:
-        1. Copy to \Tests\Unit\ folder and rename <ResourceName>.tests.ps1
-           (e.g. MSFT_xFirewall.tests.ps1).
-        2. Customize TODO sections.
-        3. Delete all template comments (TODOs, etc.).
-        4. Remove any unused It-, Context-, BeforeAll-, AfterAll-,
-           BeforeEach- and AfterEach-blocks.
-        5. Remove this comment-based help.
-
-    .NOTES
-        There are multiple methods for writing unit tests. This template provides a few examples
-        which you are welcome to follow but depending on your resource, you may want to
-        design it differently. Read through our TestsGuidelines.md file for an intro on how to
-        write unit tests for DSC resources: https://github.com/PowerShell/DscResources/blob/master/TestsGuidelines.md
-#>
-
 #requires -Version 4.0 -Modules Pester
 #region HEADER
-# TODO: Update to correct module name and resource name.
+
 $script:dscModuleName = 'AccessControlDsc'
 $script:dscResourceName = 'FileSystemAuditRuleEntry'
 
@@ -44,8 +23,6 @@ $TestEnvironment = Initialize-TestEnvironment `
 
 #endregion HEADER
 
-
-
 function Invoke-TestCleanup
 {
     Restore-TestEnvironment -TestEnvironment $TestEnvironment
@@ -57,7 +34,6 @@ try
     InModuleScope $script:dscResourceName {
         Import-Module (Join-Path -Path ($PSScriptRoot | Split-Path) -ChildPath 'TestHelper.psm1') -Force
 
-        # TODO: Optionally create any variables here for use by your tests
         $folderPath = 'c:\auditFolder'
 
         $nameSpace = "root/Microsoft/Windows/DesiredStateConfiguration"
@@ -239,19 +215,6 @@ try
                 }
             }
         }
-
-        Describe 'MSFT_<ResourceName>\Get-HelperFunction' -Tag 'Helper' {
-            It 'Should ...test-description' {
-                # test-code
-            }
-
-            It 'Should ....test-description' {
-                # test-code
-            }
-        }
-
-        # TODO: add more Describe blocks as needed
-    }
 }
 finally
 {
