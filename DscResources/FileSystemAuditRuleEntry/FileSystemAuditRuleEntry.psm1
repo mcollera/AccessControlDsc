@@ -167,7 +167,7 @@ function Set-TargetResource
                 $expected += $results.Rules
                 $toBeRemoved += $results.Absent
 
-                if ($accessControlItem.ForcePrinciPal)
+                if ($auditRuleItem.ForcePrinciPal)
                 {
                     $toBeRemoved += $results.ToBeRemoved
                 }
@@ -179,7 +179,7 @@ function Set-TargetResource
             {
                 $currentAcl.SetAuditRuleProtection($true,$true)
                 Set-Acl -Path $path -AclObject $currentAcl
-                $currentAcl = Get-Acl -Path $path -Audit
+                $currentAcl = $currentAcl = Get-AuditAcl -Path $Path
             }
 
             foreach ($rule in $expected)
@@ -238,7 +238,9 @@ function Test-TargetResource
     $aclRules = @()
 
     $inDesiredState = $True
-    $currentAuditAcl = Get-Acl -Path $Path -Audit -ErrorAction Stop
+    $inputPath = Get-InputPath($Path)
+    $currentAuditAcl = Get-Acl -Path $inputPath -Audit -ErrorAction Stop
+
     if ($null -ne $currentAuditAcl)
     {
         if ($Force)
@@ -288,7 +290,7 @@ function Test-TargetResource
         {
             if ($rule.Match -eq $false)
             {
-                Write-CustomVerboseMessage -Action 'ActionMissPresentPerm' -Path $Path -Rule $rule.rule
+                Write-CustomVerboseMessage -Action 'ActionMissPresentPerm' -Path $inputPath -Rule $rule.rule
                 $inDesiredState = $false
             }
         }
@@ -297,7 +299,7 @@ function Test-TargetResource
         {
             foreach ($rule in $absentToBeRemoved.Rule)
             {
-                Write-CustomVerboseMessage -Action 'ActionAbsentPermission' -Path $Path -Rule $rule
+                Write-CustomVerboseMessage -Action 'ActionAbsentPermission' -Path $inputPath -Rule $rule
             }
 
             $inDesiredState = $false
@@ -306,7 +308,7 @@ function Test-TargetResource
         {
             foreach ($rule in $toBeRemoved.Rule)
             {
-                Write-CustomVerboseMessage -Action 'ActionNonMatchPermission' -Path $Path -Rule $rule
+                Write-CustomVerboseMessage -Action 'ActionNonMatchPermission' -Path $inputPath -Rule $rule
             }
 
             $inDesiredState = $false
@@ -481,4 +483,26 @@ function Test-FileSystemAuditRuleMatch
             $_.IdentityReference -eq $ReferenceRule.IdentityReference
         })
     }
+}
+
+<#
+    .SYNOPSIS
+        Retrieves the Audit authorization data from a filesystem object
+#>#>
+function Get-AuditAcl
+{
+    [CmdletBinding()]
+    [OutputType([System.Security.AccessControl.DirectorySecurity])]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $Path
+    )
+
+    $sacl =  (Get-Item -Path $Path).GetAccessControl('All')
+    $auditRules = $sacl.GetAuditRules($true,$true,[System.Security.Principal.NTAccount])
+    $sacl | Add-Member -MemberType NoteProperty -Value $auditRules -Name Audit
+
+    return $sacl
 }

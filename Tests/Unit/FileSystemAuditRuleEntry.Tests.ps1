@@ -44,23 +44,16 @@ $TestEnvironment = Initialize-TestEnvironment `
 
 #endregion HEADER
 
-function Invoke-TestSetup
-{
-     # TODO: Optional init code goes here...
-}
+
 
 function Invoke-TestCleanup
 {
     Restore-TestEnvironment -TestEnvironment $TestEnvironment
-
-    # TODO: Other Optional Cleanup Code Goes Here...
 }
 
 # Begin Testing
 try
 {
-    Invoke-TestSetup
-
     InModuleScope $script:dscResourceName {
         Import-Module (Join-Path -Path ($PSScriptRoot | Split-Path) -ChildPath 'TestHelper.psm1') -Force
 
@@ -72,17 +65,60 @@ try
         $cimFileSystemAuditRule += New-CimInstance -ClientOnly -Namespace $nameSpace -ClassName FileSystemAuditRule -Property @{
             AuditFlags = 'Success'
             FileSystemRights = @('ExecuteFile')
-            Inheritance = 'This folder only'
-            Ensure = ""
+            Inheritance = 'This folder subfolders and files'
+            Ensure = "Present"
         }
     
         $cimfileSystemAuditRuleList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
         $cimFileSystemAuditRuleList += New-CimInstance -ClientOnly -Namespace $nameSpace -ClassName FileSystemAuditRuleList -Property @{
-            Principal = 'users'
-            ForcePrincipal = $false
+            Principal = 'BUILTIN\Users'
+            ForcePrincipal = $true
             AuditRuleEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($cimFileSystemAuditRule)
         }
+
+        $cimFileSystemAuditRuleFalse += New-CimInstance -ClientOnly -Namespace $nameSpace -ClassName FileSystemAuditRule -Property @{
+            AuditFlags = 'Fail'
+            FileSystemRights = @('ExecuteFile')
+            Inheritance = 'This folder subfolders and files'
+            Ensure = ""
+        }
+
+        $cimFileSystemAuditRuleListFail += New-CimInstance -ClientOnly -Namespace $nameSpace -ClassName FileSystemAuditRuleList -Property @{
+            Principal = 'BUILTIN\Users'
+            ForcePrincipal = $False
+            AuditRuleEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($cimFileSystemAuditRuleFalse)
+        }
         
+        $cimFileSystemAuditRuleTestTrue = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
+        $cimFileSystemAuditRuleTestTrue += New-CimInstance -ClientOnly -Namespace $nameSpace -ClassName FileSystemAuditRule -Property @{
+            AuditFlags = 'Success'
+            FileSystemRights = @('Write')
+            Inheritance = 'This folder subfolders and files'
+            Ensure = "Present"
+        }
+
+        $cimfileSystemAuditRuleListTestTrue = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
+        $cimFileSystemAuditRuleListTestTrue += New-CimInstance -ClientOnly -Namespace $nameSpace -ClassName FileSystemAuditRuleList -Property @{
+            Principal = 'BUILTIN\Users'
+            ForcePrincipal = $true
+            AuditRuleEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($cimFileSystemAuditRuleTestTrue)
+        }
+
+        $cimFileSystemAuditRuleTestFalse = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
+        $cimFileSystemAuditRuleTestFalse += New-CimInstance -ClientOnly -Namespace $nameSpace -ClassName FileSystemAuditRule -Property @{
+            AuditFlags = 'Fail'
+            FileSystemRights = @('Write')
+            Inheritance = 'This folder subfolders and files'
+            Ensure = "Present"
+        }
+
+        $cimfileSystemAuditRuleListTestFalse = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
+        $cimfileSystemAuditRuleListTestFalse += New-CimInstance -ClientOnly -Namespace $nameSpace -ClassName FileSystemAuditRuleList -Property @{
+            Principal = 'BUILTIN\Users'
+            ForcePrincipal = $true
+            AuditRuleEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($cimFileSystemAuditRuleTestFalse)
+        }
+
         $mockAcl = @{}
         $mockAcl.Audit = @(
             @{
@@ -94,6 +130,7 @@ try
                 PropagationFlags  = @{Value__ = 1}
             }
         )
+
         Mock -CommandName Test-Path -MockWith { return $true }
         Mock -CommandName Get-InputPath -MockWith { return $folderPath }
         Mock -CommandName Get-Acl -MockWith { $mockAcl }
@@ -124,7 +161,6 @@ try
                     $getTargetResult = Get-TargetResource @getParameters
                     $getTargetResult.AuditRuleList.Length -ge 1 | Should -Be $false
                     Assert-MockCalled -CommandName Write-Verbose -ParameterFilter {$Message -eq "Error obtaining 'c:\auditFolder' ACL."}
-
                 }
             }
 
@@ -139,29 +175,67 @@ try
         }
 
         Describe 'Set-TargetResource' -Tag 'Set' {
-            Context 'When the system is in the desired state' {
-                It 'Should ...test-description' {
-                    # test-code
+            $setParameters = @{
+                Path = $env:Temp
+                AuditRuleList = @($cimfileSystemAuditRuleList)
+                Force = $true
+            }
+
+            $auditRuleFail = ConvertTo-FileSystemAuditRule -AuditRuleList $cimFileSystemAuditRuleListFail[0] -IdentityRef (New-Object System.Security.Principal.NTAccount('BUILTIN\Users'))
+            $auditRule = ConvertTo-FileSystemAuditRule -AuditRuleList $cimfileSystemAuditRuleList[0] -IdentityRef (New-Object System.Security.Principal.NTAccount('BUILTIN\Users'))
+            $setAcl = Get-AuditAcl -Path $env:Temp
+            $setAcl | Add-Member -MemberType NoteProperty -Value $auditRule.Rules -Name Audit -Force
+
+            Mock -CommandName Write-CustomVerboseMessage
+            Mock -CommandName Set-Acl
+            Mock -CommandName Get-AuditAcl -MockWith { $setAcl }
+
+            Context 'Force is TRUE' {
+                It 'Should call Write-CustomVerboseMessage with ActionRemoveAudit' {
+                    Set-TargetResource @setParameters
+                    Assert-MockCalled -CommandName Write-CustomVerboseMessage -ParameterFilter {$Action -eq 'ActionRemoveAudit'}
                 }
             }
 
-            Context 'When the system is not in the desired state' {
-                It 'Should ....test-description' {
-                    # test-code
+            Context 'Force is FALSE' {
+                $setParameters.Force = $false
+                $setAcl | Add-Member -MemberType NoteProperty -Value $auditRuleFail.Rules -Name Audit -Force
+                Mock -CommandName Get-AuditAcl -MockWith { $setAcl }
+                It 'Should call Write-CustomVerboseMessage with ActionAddAudit' {
+                    Set-TargetResource @setParameters
+                    Assert-MockCalled -CommandName Write-CustomVerboseMessage -ParameterFilter {$Action -eq 'ActionAddAudit'}
                 }
             }
         }
 
-        Describe 'MSFT_<ResourceName>\Test-TargetResource' -Tag 'Test' {
+        Describe 'Test-TargetResource' -Tag 'Test' {
+            $testParameters = @{
+                Path = $env:Temp
+                AuditRuleList = @($cimFileSystemAuditRuleListTestTrue)
+                Force = $true
+            }
+
+            Mock -CommandName Write-CustomVerboseMessage
             Context 'When the system is in the desired state' {
-                It 'Should ...test-description' {
-                    # test-code
+                $auditRule = ConvertTo-FileSystemAuditRule -AuditRuleList $cimFileSystemAuditRuleListTestTrue[0] -IdentityRef (New-Object System.Security.Principal.NTAccount('BUILTIN\Users'))
+                $setAcl = Get-AuditAcl -Path $env:Temp
+                $setAcl | Add-Member -MemberType NoteProperty -Value $auditRule.Rules -Name Audit -Force
+                Mock -CommandName Get-Acl -MockWith { $setAcl }
+                It 'Should return TRUE' {
+                    $testResult = Test-TargetResource @testParameters
+                    $testResult | Should -Be $true
                 }
             }
 
             Context 'When the system is not in the desired state' {
-                It 'Should ....test-description' {
-                    # test-code
+                $testParameters.Force = $false
+                $auditRule = ConvertTo-FileSystemAuditRule -AuditRuleList $cimfileSystemAuditRuleListTestFalse[0] -IdentityRef (New-Object System.Security.Principal.NTAccount('BUILTIN\Users'))
+                $setAcl = Get-AuditAcl -Path $env:Temp
+                $setAcl | Add-Member -MemberType NoteProperty -Value $auditRule.Rules -Name Audit -Force
+                Mock -CommandName Get-Acl -MockWith { $setAcl }
+                It 'Should return FALSE' {
+                    $testResult = Test-TargetResource @testParameters
+                    $testResult | Should -Be $false
                 }
             }
         }
