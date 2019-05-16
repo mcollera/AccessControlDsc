@@ -407,3 +407,21 @@ function Get-InputPath
 
     return $returnPath
 }
+
+function Get-AuditAcl
+{
+    [CmdletBinding()]
+    [OutputType([System.Security.AccessControl.DirectorySecurity])]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $Path
+    )
+
+    $sacl =  (Get-Item -Path $Path).GetAccessControl('Access')
+    $auditRules = $sacl.GetAuditRules($true,$true,[System.Security.Principal.NTAccount])
+    $sacl | Add-Member -MemberType NoteProperty -Value $auditRules -Name Audit
+
+    return $sacl
+}

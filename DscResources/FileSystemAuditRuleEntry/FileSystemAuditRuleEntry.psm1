@@ -47,8 +47,6 @@ function Get-TargetResource
 
     if (Test-Path -Path $inputPath)
     {
-        #$fileSystemItem = Get-Item -Path $inputPath -ErrorAction Stop
-        #$currentAcl = $fileSystemItem.GetAccessControl('Audit')
         $currentAcl = Get-Acl -Path $inputPath -Audit
 
         if ($null -ne $currentAcl)
@@ -128,12 +126,9 @@ function Set-TargetResource
         $Force = $false
     )
 
-    if (Test-Path -Path $path)
+    if (Test-Path -Path $Path)
     {
-        #$currentAcl = Get-Acl -Path $path -Audit
-        $currentAcl =  (Get-Item -Path $path).GetAccessControl('Access')
-        $auditRules = $currentAcl.GetAuditRules($true,$true,[System.Security.Principal.NTAccount])
-        $currentAcl | Add-Member -MemberType NoteProperty -Value $auditRules -Name Audit
+        $currentAcl = Get-AuditAcl -Path $Path
 
         if ($null -ne $currentAcl)
         {
