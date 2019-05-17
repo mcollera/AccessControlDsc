@@ -11,6 +11,7 @@ try
         FileName      = 'AccessControlResourceHelper.strings.psd1'
         ErrorAction   = 'Stop'
     }
+
     $script:localizedData = Import-LocalizedData @importLocalizedDataParams
 }
 catch
@@ -84,7 +85,6 @@ function Get-TargetResource
                     AuditRuleEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($cimFileSystemAuditRule)
                 }
             }
-
         }
         else
         {
@@ -197,6 +197,7 @@ function Set-TargetResource
                 {
                     $currentAcl.RemoveAuditRuleSpecific($rule)
                 }
+
                 Write-CustomVerboseMessage -Action 'ActionRemoveAudit' -Path $path -Rule $rule
             }
 
@@ -282,7 +283,6 @@ function Test-TargetResource
                     $toBeRemoved += $results.ToBeRemoved
                 }
             }
-            
         }
 
         foreach ($rule in $expected)
@@ -303,6 +303,7 @@ function Test-TargetResource
 
             $inDesiredState = $false
         }
+
         if ($toBeRemoved.Count -gt 0)
         {
             foreach ($rule in $toBeRemoved.Rule)

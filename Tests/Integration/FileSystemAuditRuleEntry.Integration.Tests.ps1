@@ -24,7 +24,6 @@ $TestEnvironment = Initialize-TestEnvironment `
 
 #endregion
 
-
 try
 {
     $configFile = Join-Path -Path $PSScriptRoot -ChildPath "$($DSCResourceName).Config.ps1"

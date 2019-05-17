@@ -21,18 +21,18 @@ catch
     }
 }
 
+<#
+    .SYNOPSIS
+        Resolves the principal name SID
+
+    .PARAMETER Identity
+        Specifies the identity of the principal.
+
+    .EXAMPLE
+    Resolve-Identity -Identity "everyone"
+#>
 function Resolve-Identity
 {
-    <#
-        .SYNOPSIS
-            Resolves the principal name SID
-
-        .PARAMETER Identity
-            Specifies the identity of the principal.
-
-        .EXAMPLE
-        Resolve-Identity -Identity "everyone"
-    #>
     [CmdletBinding()]
     param
     (
@@ -142,6 +142,10 @@ function ConvertTo-SID
 
 }
 
+<#
+    .SYNOPSIS
+        Confirms a required module exists.
+#>
 function Assert-Module
 {
     [CmdletBinding()]
@@ -161,6 +165,10 @@ function Assert-Module
     }
 }
 
+<#
+    .SYNOPSIS
+        Retrieves teh guid of the delegation right
+#>
 function Get-DelegationRightsGuid
 {
     Param
@@ -189,8 +197,14 @@ function Get-DelegationRightsGuid
     }
 }
 
+<#
+    .SYNOPSIS
+        Retrieves the name of the AD schema object.
+#>
 function Get-SchemaObjectName
 {
+    [CmdletBinding()]
+    [OutputType([System.String])]
     Param
     (
         [Parameter()]
@@ -218,8 +232,13 @@ function Get-SchemaObjectName
     }
 }
 
+<#
+    .SYNOPSIS
+        Produces a custom verbose message displaying details of every property touched by the resource.
+#>
 function Write-CustomVerboseMessage
 {
+    [CmdletBinding()]
     param
     (
         [Parameter(Mandatory = $true)]
@@ -289,9 +308,14 @@ function Write-CustomVerboseMessage
     }
 }
 
-Function Get-NtfsInheritenceFlag
+<#
+    .SYNOPSIS
+        Resolves inheritance to inheritanceFlag and propagationFlag
+#>
+function Get-NtfsInheritenceFlag
 {
     [CmdletBinding()]
+    [OutputType([PSCustomObject])]
     param
     (
         [Parameter(Mandatory = $true)]
@@ -305,7 +329,6 @@ Function Get-NtfsInheritenceFlag
             $InheritanceFlag = "0"
             $PropagationFlag = "0"
             break
-
         }
         "This folder subfolders and files"{
             $InheritanceFlag = "3"
@@ -348,7 +371,11 @@ Function Get-NtfsInheritenceFlag
     }
 }
 
-Function Get-NtfsInheritenceName
+<#
+    .SYNOPSIS
+        Returns Inheritance name from inheritanceFlag and propagationFlag
+#>
+function Get-NtfsInheritenceName
 {
     [CmdletBinding()]
     [OutputType([System.String])]
@@ -391,16 +418,20 @@ Function Get-NtfsInheritenceName
     return "none"
 }
 
+<#
+    .SYNOPSIS
+        Resolves environment variable that are included in a folder/file path.
+#>
 function Get-InputPath
 {
+    [CmdletBinding()]
+    [OutputType([System.String])]
     param
     (
         [Parameter(Mandatory = $true)]
         [System.String]
         $Path
     )
-
-    $returnPath = $Path
 
     # If Path has a environment variable, convert it to a locally usable path
     $returnPath = [System.Environment]::ExpandEnvironmentVariables($Path)
