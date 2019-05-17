@@ -1089,7 +1089,7 @@ Describe "$DSCResourceName\ConvertTo-FileSystemAccessRule" {
 Describe "$DSCResourceName\Compare-NtfsRule" {
     Context "Compare-NtfsRule with Ensure set to Absent with no matching rules" {
         $pathName = "$TestDrive\TestDirectory"
-        $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights FullControl -Inheritance 'This Folder and Files' -Ensure Absent
+        $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $true -AccessControlType Allow -FileSystemRights FullControl -Inheritance 'This Folder and Files' -Ensure Absent
         $ContextParams = @{
             Path = $pathName
             AccessControlList = $TempAcl 
@@ -1199,7 +1199,7 @@ Describe "$DSCResourceName\Compare-NtfsRule" {
 
     Context "Compare-NtfsRule with Ensure set to Present with no matching rules" {
         $pathName = "$TestDrive\TestDirectory"
-        $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights "ReadAndExecute" -Inheritance "This folder subfolders and files" -Ensure Present
+        $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $true -AccessControlType Allow -FileSystemRights "ReadAndExecute" -Inheritance "This folder subfolders and files" -Ensure Present
         $ContextParams = @{
             Path = $pathName
             AccessControlList = $TempAcl 
