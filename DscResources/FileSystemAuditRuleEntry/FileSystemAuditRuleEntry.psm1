@@ -110,7 +110,6 @@ function Get-TargetResource
 function Set-TargetResource
 {
     [CmdletBinding()]
-    [OutputType([System.Boolean])]
     param
     (
         [Parameter(Mandatory = $true)]
@@ -323,8 +322,14 @@ function Test-TargetResource
     return $inDesiredState
 }
 
+<#
+    .SYNOPSIS
+        Converts a CimInstance to a File System.Security.AccessControl.FileSystemAuditRule
+#>
 function ConvertTo-FileSystemAuditRule
 {
+    [CmdletBinding()]
+    [OutputType([System.Management.Automation.PSCustomObject])]
     param
     (
         [Parameter(Mandatory = $true)]
@@ -358,8 +363,14 @@ function ConvertTo-FileSystemAuditRule
     return $referenceRule
 }
 
+<#
+    .SYNOPSIS
+        Compares desired file system audit rules with the current state.
+#>
 function Compare-FileSystemAuditRule
 {
+    [CmdletBinding()]
+    [OutputType([System.Management.Automation.PSCustomObject])]
     param
     (
         [Parameter(Mandatory = $true)]
@@ -436,8 +447,14 @@ function Compare-FileSystemAuditRule
     }
 }
 
+<#
+    .SYNOPSIS
+        Tests if files system audit rules match.
+#>
 function Test-FileSystemAuditRuleMatch
 {
+    [CmdletBinding()]
+    [OutputType([System.Boolean])]
     param
     (
         [Parameter(Mandatory = $true)]

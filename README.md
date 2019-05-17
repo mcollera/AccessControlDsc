@@ -141,6 +141,33 @@ Please check out common DSC Resources [contributing guidelines](
 * [Configure access entries for registry key](
   https://github.com/mcollera/AccessControlDsc/blob/master/Examples/RegistryAccessEntry_example.ps1)
 
+### **FileSystemAuditRuleEntry**
+
+* **[String] Path** _(Key)_: Indicates the path to the target item.
+
+* **[String] AuditRuleList**: Indicates the audit rule information in the form of an array of instances of the FileSystemAuditRuleList CIM class. Includes the following properties:
+
+  * **[String] Principal:** Indicates the identity of the principal.
+
+  * **[String] AuditRuleEntry:** Indicates the audit rule entry in the form of an array of instances of the FileSystemAuditRule CIM class.  Includes the following properties:
+
+    * **[String] AuditFlags:** Specifies the conditions for auditing attempts to access a securable object. _{ None | Success | Failure }_
+
+    * **[String] FileSystemRights:** Indicates the access rights to be granted to the principal. _{ AppendData | ChangePermissions | CreateDirectories | CreateFiles | Delete | DeleteSubdirectoriesAndFiles | ExecuteFile | FullControl | ListDirectory | Modify | Read | ReadAndExecute | ReadAttributes | ReadData | ReadExtendedAttributes | ReadPermissions | Synchronize | TakeOwnership | Traverse | Write | WriteAttributes | WriteData | WriteExtendedAttributes }_
+
+    * **[String] Inheritance:** Indicates the inheritance type of the permission entry. _{ This folder only | This folder subfolders and files | This folder and subfolders | This folder and files | Subfolders and files only | Subfolders only | Files only }_
+
+    * **[String] Ensure:** Whether the rights should be present or absent. _{ Ensure | Present }_
+
+  * **[String] ForcePrincipal:** Indicates whether the rights for this principal should be forced.  Will remove any rights not explicitly defined in the configuration for the principal.
+
+* **[String] Force:** Indicates whether the audit rules defined should be enforced. Will remove any audit rules not explicitly defined in the configuration for the path.
+
+#### FileSystemAuditRuleEntry Examples
+
+* [Configure Failure and Success AuditFlags](
+  https://github.com/mcollera/AccessControlDsc/blob/master/Examples/FileSystemAuditRuleEntry_example.ps1)
+
 ## Versions
 
 ### 1.3.0.0

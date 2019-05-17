@@ -349,49 +349,6 @@ Function Test-TargetResource
     return $inDesiredState
 }
 
-Function Get-NtfsInheritenceName
-{
-    [CmdletBinding()]
-    [OutputType([System.String])]
-    param
-    (
-        [Parameter(Mandatory = $true)]
-        [System.String]
-        $InheritanceFlag,
-
-        [Parameter(Mandatory = $true)]
-        [System.String]
-        $PropagationFlag
-    )
-
-    switch("$InheritanceFlag-$PropagationFlag")
-    {
-        "0-0"{
-            return "This folder only"
-        }
-        "3-0"{
-            return "This folder subfolders and files"
-        }
-        "1-0"{
-            return "This folder and subfolders"
-        }
-        "2-0"{
-            return "This folder and files"
-        }
-        "3-2"{
-            return "Subfolders and files only"
-        }
-        "1-2"{
-            return "Subfolders Only"
-        }
-        "2-2"{
-            return "Files Only"
-        }
-    }
-
-    return "none"
-}
-
 Function ConvertTo-FileSystemAccessRule
 {
     param
