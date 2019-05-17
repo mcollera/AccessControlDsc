@@ -1,3 +1,11 @@
+[ClassVersion("1.0.0.0"), FriendlyName("FileSystemAuditRuleEntry")]
+class FileSystemAuditRuleEntry : OMI_BaseResource
+{
+    [Key, Description("Indicates the path to the target item.")] String Path;
+    [Required, Description("Indicates the audit rule information in the form of an array of instances of the FileSystemAuditRuleList CIM class."), EmbeddedInstance("FileSystemAuditRuleList")] String AuditRuleList[];
+    [Write, Description("Indicates whether the audit rules defined should be enforced. Will remove any audit rules not explicitly defined in the configuration for the path.")] Boolean Force;
+};
+
 [ClassVersion("1.0.0.0")]
 class FileSystemAuditRule
 {
@@ -13,12 +21,4 @@ class FileSystemAuditRuleList
     [Required, Description("Indicates the identity of the principal.")] String Principal;
     [Required, Description("Indicates whether the rights for this principal should be forced. Will remove any rights not explicitly defined in the configuration for the principal.")] Boolean ForcePrincipal;
     [Required, Description("Indicates the audit rule entry in the form of an array of instances of the FileSystemAuditRule CIM class."), EmbeddedInstance("FileSystemAuditRule")] String AuditRuleEntry[];
-};
-
-[ClassVersion("1.0.0.0"), FriendlyName("FileSystemAuditRuleEntry")]
-class FileSystemAuditRuleEntry : OMI_BaseResource
-{
-    [Key, Description("Indicates the path to the target item.")] String Path;
-    [Required, Description("Indicates the audit rule information in the form of an array of instances of the FileSystemAuditRuleList CIM class."), EmbeddedInstance("FileSystemAuditRuleList")] String AuditRuleList[];
-    [Write, Description("Indicates whether the audit rules defined should be enforced. Will remove any audit rules not explicitly defined in the configuration for the path.")] Boolean Force;
 };
