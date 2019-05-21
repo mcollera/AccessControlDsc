@@ -6,7 +6,7 @@ $DSCResourceName = 'ActiveDirectoryAccessEntry'
 
 Import-Module "$($PSScriptRoot)\..\..\DSCResources\$($DSCResourceName)\$($DSCResourceName).psm1" -Force
 Import-Module "$($PSScriptRoot)\..\..\DscResources\AccessControlResourceHelper\AccessControlResourceHelper.psm1" -Force
-Import-Module "$($PSScriptRoot)\..\TestHelper.psm1" -Force
+Import-Module (Join-Path -Path ($PSScriptRoot | Split-Path) -ChildPath 'TestHelper.psm1') -Force
 
 #endregion
 

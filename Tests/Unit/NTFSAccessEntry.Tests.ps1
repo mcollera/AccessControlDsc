@@ -11,7 +11,7 @@ Import-Module "$($PSScriptRoot)\..\TestHelper.psm1" -Force
 
 Describe "$DSCResourceName\Get-TargetResource" {
     Context "Permissions should exist" {
-        $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights FullControl -Inheritance 'This Folder and Files' -Ensure Absent 
+        $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights FullControl -Inheritance 'This Folder and Files' -Ensure Absent
         $pathName = "$TestDrive\TestDirectory"
         $ContextParams = @{
             Path = $pathName
@@ -53,19 +53,19 @@ Describe "$DSCResourceName\Get-TargetResource" {
         It 'Should return Ensure set as empty' {
             $GetResult.AccessControl.AccessControlEntry.Ensure | Should Be $null
         }
-                    
+
         It "Should return $false from GetReturn.Force" {
             $GetResult.Force | Should Be $false
         }
-        
+
         It 'Should return Path' {
             $GetResult.Path | Should Be $ContextParams.Path
         }
-        
+
         It 'Should return Principal' {
             $GetResult.Principal | Should Be $ContextParams.Principal
         }
-        
+
         It 'Should return AccessControlEntries' {
             $GetResult.AccessControlList.AccessControlEntry.Count | Should Be 3
         }
@@ -1089,7 +1089,7 @@ Describe "$DSCResourceName\ConvertTo-FileSystemAccessRule" {
 Describe "$DSCResourceName\Compare-NtfsRule" {
     Context "Compare-NtfsRule with Ensure set to Absent with no matching rules" {
         $pathName = "$TestDrive\TestDirectory"
-        $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights FullControl -Inheritance 'This Folder and Files' -Ensure Absent
+        $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $true -AccessControlType Allow -FileSystemRights FullControl -Inheritance 'This Folder and Files' -Ensure Absent
         $ContextParams = @{
             Path = $pathName
             AccessControlList = $TempAcl 
@@ -1199,7 +1199,7 @@ Describe "$DSCResourceName\Compare-NtfsRule" {
 
     Context "Compare-NtfsRule with Ensure set to Present with no matching rules" {
         $pathName = "$TestDrive\TestDirectory"
-        $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights "ReadAndExecute" -Inheritance "This folder subfolders and files" -Ensure Present
+        $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $true -AccessControlType Allow -FileSystemRights "ReadAndExecute" -Inheritance "This folder subfolders and files" -Ensure Present
         $ContextParams = @{
             Path = $pathName
             AccessControlList = $TempAcl 

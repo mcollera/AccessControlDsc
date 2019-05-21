@@ -21,18 +21,18 @@ catch
     }
 }
 
+<#
+    .SYNOPSIS
+        Resolves the principal name SID
+
+    .PARAMETER Identity
+        Specifies the identity of the principal.
+
+    .EXAMPLE
+    Resolve-Identity -Identity "everyone"
+#>
 function Resolve-Identity
 {
-    <#
-        .SYNOPSIS
-            Resolves the principal name SID
-
-        .PARAMETER Identity
-            Specifies the identity of the principal.
-
-        .EXAMPLE
-        Resolve-Identity -Identity "everyone"
-    #>
     [CmdletBinding()]
     param
     (
@@ -142,6 +142,10 @@ function ConvertTo-SID
 
 }
 
+<#
+    .SYNOPSIS
+        Confirms a required module exists.
+#>
 function Assert-Module
 {
     [CmdletBinding()]
@@ -161,6 +165,10 @@ function Assert-Module
     }
 }
 
+<#
+    .SYNOPSIS
+        Retrieves teh guid of the delegation right
+#>
 function Get-DelegationRightsGuid
 {
     Param
@@ -189,8 +197,14 @@ function Get-DelegationRightsGuid
     }
 }
 
+<#
+    .SYNOPSIS
+        Retrieves the name of the AD schema object.
+#>
 function Get-SchemaObjectName
 {
+    [CmdletBinding()]
+    [OutputType([System.String])]
     Param
     (
         [Parameter()]
@@ -218,8 +232,13 @@ function Get-SchemaObjectName
     }
 }
 
+<#
+    .SYNOPSIS
+        Produces a custom verbose message displaying details of every property touched by the resource.
+#>
 function Write-CustomVerboseMessage
 {
+    [CmdletBinding()]
     param
     (
         [Parameter(Mandatory = $true)]
@@ -234,7 +253,8 @@ function Write-CustomVerboseMessage
         [ValidateScript({
             $_ -is [System.DirectoryServices.ActiveDirectoryAccessRule] -or
             $_ -is [System.DirectoryServices.ActiveDirectoryAuditRule] -or
-            $_ -is [System.Security.AccessControl.FileSystemAccessRule]
+            $_ -is [System.Security.AccessControl.FileSystemAccessRule] -or
+            $_ -is [System.Security.AccessControl.AuditRule]
         })]
         $Rule
     )
@@ -269,6 +289,14 @@ function Write-CustomVerboseMessage
             $properties.Add('PropagationFlags', $Rule.PropagationFlags)
             break
         }
+        'FileSystemAuditRule'
+        {
+            $properties.Add('FileSystemRights', $Rule.FileSystemRights)
+            $properties.Add('AuditFlags', $Rule.AuditFlags)
+            $properties.Add('InheritanceFlags', $Rule.InheritanceFlags)
+            $properties.Add('PropagationFlags', $Rule.PropagationFlags)
+            break
+        }
     }
 
     Write-Verbose -Message $localizedData[$Action] -Verbose
@@ -278,4 +306,135 @@ function Write-CustomVerboseMessage
     {
         Write-Verbose -Message ($localizedData[$property] -f $properties[$property]) -Verbose
     }
+}
+
+<#
+    .SYNOPSIS
+        Resolves inheritance to inheritanceFlag and propagationFlag
+#>
+function Get-NtfsInheritenceFlag
+{
+    [CmdletBinding()]
+    [OutputType([PSCustomObject])]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $Inheritance
+    )
+
+    switch($Inheritance)
+    {
+        "This folder only"{
+            $InheritanceFlag = "0"
+            $PropagationFlag = "0"
+            break
+        }
+        "This folder subfolders and files"{
+            $InheritanceFlag = "3"
+            $PropagationFlag = "0"
+            break
+
+        }
+        "This folder and subfolders"{
+            $InheritanceFlag = "1"
+            $PropagationFlag = "0"
+            break
+        }
+        "This folder and files"{
+            $InheritanceFlag = "2"
+            $PropagationFlag = "0"
+            break
+
+        }
+        "Subfolders and files only"{
+            $InheritanceFlag = "3"
+            $PropagationFlag = "2"
+            break
+
+        }
+        "Subfolders only"{
+            $InheritanceFlag = "1"
+            $PropagationFlag = "2"
+            break
+        }
+        "Files only"{
+            $InheritanceFlag = "2"
+            $PropagationFlag = "2"
+            break
+        }
+    }
+
+    return [PSCustomObject]@{
+        InheritanceFlag = $InheritanceFlag
+        PropagationFlag = $PropagationFlag
+    }
+}
+
+<#
+    .SYNOPSIS
+        Returns Inheritance name from inheritanceFlag and propagationFlag
+#>
+function Get-NtfsInheritenceName
+{
+    [CmdletBinding()]
+    [OutputType([System.String])]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $InheritanceFlag,
+
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $PropagationFlag
+    )
+
+    switch("$InheritanceFlag-$PropagationFlag")
+    {
+        "0-0"{
+            return "This folder only"
+        }
+        "3-0"{
+            return "This folder subfolders and files"
+        }
+        "1-0"{
+            return "This folder and subfolders"
+        }
+        "2-0"{
+            return "This folder and files"
+        }
+        "3-2"{
+            return "Subfolders and files only"
+        }
+        "1-2"{
+            return "Subfolders Only"
+        }
+        "2-2"{
+            return "Files Only"
+        }
+    }
+
+    return "none"
+}
+
+<#
+    .SYNOPSIS
+        Resolves environment variable that are included in a folder/file path.
+#>
+function Get-InputPath
+{
+    [CmdletBinding()]
+    [OutputType([System.String])]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $Path
+    )
+
+    # If Path has a environment variable, convert it to a locally usable path
+    $returnPath = [System.Environment]::ExpandEnvironmentVariables($Path)
+
+    return $returnPath
 }

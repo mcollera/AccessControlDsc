@@ -1,3 +1,11 @@
+[ClassVersion("0.9.0.0"), FriendlyName("NTFSAccessEntry")]
+class NTFSAccessEntry : OMI_BaseResource
+{
+    [Key, Description("Indicates the path to the target item.")] String Path;
+    [Required, Description("Indicates the access control information in the form of an array of instances of the NTFSAccessControlList CIM class."), EmbeddedInstance("NTFSAccessControlList")] String AccessControlList[];
+    [Write] Boolean Force;
+};
+
 [ClassVersion("0.9.0.0")]
 class NTFSAccessControlEntry
 {
@@ -13,12 +21,4 @@ class NTFSAccessControlList
     [Write, Description("Indicates the identity of the principal.")] String Principal;
     [Write] Boolean ForcePrincipal;
     [Write, Description("Indicates the access control entry in the form of an array of instances of the AccessControlList CIM class."), EmbeddedInstance("NTFSAccessControlEntry")] String AccessControlEntry[];
-};
-
-[ClassVersion("0.9.0.0"), FriendlyName("NTFSAccessEntry")]
-class NTFSAccessEntry : OMI_BaseResource
-{
-    [Key, Description("Indicates the path to the target item.")] String Path;
-    [Required, Description("Indicates the access control information in the form of an array of instances of the NTFSAccessControlList CIM class."), EmbeddedInstance("NTFSAccessControlList")] String AccessControlList[];
-    [Write] Boolean Force;
 };
