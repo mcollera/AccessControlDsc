@@ -546,7 +546,7 @@ function Test-FileSystemAuditRuleMatch
     .SYNOPSIS
         Retrieves the Audit authorization data from a filesystem object
 
-    .PATH
+    .PARAMETER PATH
         Specifies the path to the target folder.
 #>#>
 function Get-AuditAcl
