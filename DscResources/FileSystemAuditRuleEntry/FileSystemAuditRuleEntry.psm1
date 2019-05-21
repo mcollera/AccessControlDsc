@@ -154,10 +154,12 @@ function Set-TargetResource
                     foreach ($rule in $currentAcl.Audit)
                     {
                         $ruleRemoval = $currentAcl.RemoveAuditRule($rule)
+
                         if (-not $ruleRemoval)
                         {
                             $currentAcl.RemoveAuditRuleSpecific($rule)
                         }
+
                         Write-CustomVerboseMessage -Action 'ActionRemoveAudit' -Path $path -Rule $rule
                     }
                 }
@@ -174,7 +176,7 @@ function Set-TargetResource
                 $expected += $results.Rules
                 $toBeRemoved += $results.Absent
 
-                if ($auditRuleItem.ForcePrinciPal)
+                if ($auditRuleItem.ForcePrincipal)
                 {
                     $toBeRemoved += $results.ToBeRemoved
                 }
@@ -249,7 +251,7 @@ function Test-TargetResource
 
     $aclRules = @()
 
-    $inDesiredState = $True
+    $inDesiredState = $true
     $inputPath = Get-InputPath($Path)
     $currentAuditAcl = Get-Acl -Path $inputPath -Audit -ErrorAction Stop
 
@@ -338,6 +340,12 @@ function Test-TargetResource
 <#
     .SYNOPSIS
         Converts a CimInstance to a File System.Security.AccessControl.FileSystemAuditRule
+    
+    .PARAMETER AuditRuleList
+        A collection of CIM instances to be converted to an FileSystemAuditRule
+
+    .PARAMETER IndentityRef
+        Specifies the prinipal to attach to the FileSystemAuditRule
 #>
 function ConvertTo-FileSystemAuditRule
 {
@@ -367,6 +375,7 @@ function ConvertTo-FileSystemAuditRule
                 $inheritance.PropagationFlag,
                 $ace.AuditFlags
             )
+
             Ensure = $ace.Ensure
         }
 
@@ -379,6 +388,15 @@ function ConvertTo-FileSystemAuditRule
 <#
     .SYNOPSIS
         Compares desired file system audit rules with the current state.
+
+    .PARAMETER Expected
+        Specifies the expected state
+
+    .PARAMETER Actual
+        Specifies the current state
+
+    .PARAMETER Force
+        Specifies if that the Expected auditRules are the only rules to be applied.
 #>
 function Compare-FileSystemAuditRule
 {
@@ -463,6 +481,15 @@ function Compare-FileSystemAuditRule
 <#
     .SYNOPSIS
         Tests if files system audit rules match.
+
+    .PARAMETER DifferenceRule
+        Specifies the rules in the configuration.
+
+    .PARAMETER ReferenceRule
+        Specifies the rules currently applied
+
+    .PARAMETER Force
+        Specifies if that the Expected ReferenceRule are the only rules to be applied.
 #>
 function Test-FileSystemAuditRuleMatch
 {
@@ -518,6 +545,9 @@ function Test-FileSystemAuditRuleMatch
 <#
     .SYNOPSIS
         Retrieves the Audit authorization data from a filesystem object
+
+    .PATH
+        Specifies the path to the target folder.
 #>#>
 function Get-AuditAcl
 {
@@ -536,3 +566,5 @@ function Get-AuditAcl
 
     return $sacl
 }
+
+Export-ModuleMember -Function @('Get-TargetResource','Set-TargetResource','Test-TargetResource')
