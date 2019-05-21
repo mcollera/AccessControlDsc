@@ -27,6 +27,10 @@ catch
     }
 }
 
+<#
+    .SYNOPSIS
+        Returns the current state of the resource.
+#>
 function Get-TargetResource
 {
     [CmdletBinding()]
@@ -107,6 +111,10 @@ function Get-TargetResource
     return $returnValue
 }
 
+<#
+    .SYNOPSIS
+        Changes the state to desired state.
+#>
 function Set-TargetResource
 {
     [CmdletBinding()]
@@ -216,6 +224,10 @@ function Set-TargetResource
     }
 }
 
+<#
+    .SYNOPSIS
+        Test the current state of the resource.
+#>
 function Test-TargetResource
 {
     [CmdletBinding()]
