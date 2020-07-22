@@ -3,8 +3,7 @@
 #---------------------------------#
 version: 1.0.{build}.0
 install:
-    - git clone https://github.com/PowerShell/DscResource.Tests
-    - git checkout tags/0.3.0.0-PSGallery
+    - git clone -q --branch 0.3.0.0-PSGallery https://github.com/PowerShell/DscResource.Tests.git
     - ps: |
         $moduleName = 'AccessControlDSC'
         Import-Module -Name "$env:APPVEYOR_BUILD_FOLDER\DscResource.Tests\AppVeyor.psm1"
