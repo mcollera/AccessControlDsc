@@ -1,9 +1,10 @@
-#---------------------------------# 
-#      environment configuration  # 
-#---------------------------------# 
+#---------------------------------#
+#      environment configuration  #
+#---------------------------------#
 version: 1.0.{build}.0
 install:
     - git clone https://github.com/PowerShell/DscResource.Tests
+    - git checkout tags/0.3.0.0-PSGallery
     - ps: |
         $moduleName = 'AccessControlDSC'
         Import-Module -Name "$env:APPVEYOR_BUILD_FOLDER\DscResource.Tests\AppVeyor.psm1"
@@ -11,15 +12,15 @@ install:
         Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
         Invoke-AppveyorInstallTask
 
-#---------------------------------# 
-#      build configuration        # 
-#---------------------------------# 
+#---------------------------------#
+#      build configuration        #
+#---------------------------------#
 
 build: false
 
-#---------------------------------# 
-#      test configuration         # 
-#---------------------------------# 
+#---------------------------------#
+#      test configuration         #
+#---------------------------------#
 
 test_script:
     - ps: |
@@ -27,16 +28,16 @@ test_script:
             -Type 'Default' `
             -CodeCoverage `
             -CodeCovIo
-    
-#---------------------------------# 
-#      deployment configuration   # 
-#---------------------------------# 
-deploy_script: 
+
+#---------------------------------#
+#      deployment configuration   #
+#---------------------------------#
+deploy_script:
   - ps: |
       Invoke-AppveyorAfterTestTask `
             -ResourceModuleName $moduleName
-        
-        
+
+
 
 
 
