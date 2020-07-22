@@ -9,7 +9,7 @@ install:
         Import-Module -Name "$env:APPVEYOR_BUILD_FOLDER\DscResource.Tests\AppVeyor.psm1"
         Import-Module -Name "$env:APPVEYOR_BUILD_FOLDER\Tests\TestHelper.psm1"
         Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-        Invoke-AppveyorInstallTask
+        Invoke-AppveyorInstallTask -PesterMaximumVersion 4.10.1
 
 #---------------------------------#
 #      build configuration        #
