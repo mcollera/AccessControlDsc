@@ -27,7 +27,7 @@ Describe "$DSCResourceName\Get-TargetResource" {
                 'None',
                 'Allow'
             )
-        
+
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
             -ArgumentList @(
                 $TempAcl.Principal,
@@ -36,7 +36,7 @@ Describe "$DSCResourceName\Get-TargetResource" {
                 'None',
                 'Allow'
             )
-            
+
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
             -ArgumentList @(
                 $TempAcl.Principal,
@@ -110,7 +110,7 @@ Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Absen
             AccessControlList = $TempAcl
         }
 
-        Set-NewTempItemAcl -ItemType Directory -Path $ContextParams.Path 
+        Set-NewTempItemAcl -ItemType Directory -Path $ContextParams.Path
 
         It 'Should return True' {
             Test-TargetResource @ContextParams | Should Be $true
@@ -210,7 +210,7 @@ Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Absen
             Path = $pathName
             AccessControlList = $TempAcl
         }
-    
+
         $TempAccessRules = @(
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
                 -ArgumentList @(
@@ -220,7 +220,7 @@ Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Absen
                     'None',
                     'Allow'
                 )
-    
+
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
                 -ArgumentList @(
                     $TempAcl.Principal,
@@ -229,7 +229,7 @@ Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Absen
                     'None',
                     'Allow'
                 )
-    
+
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
                 -ArgumentList @(
                     $TempAcl.Principal,
@@ -239,11 +239,11 @@ Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Absen
                     'Allow'
                 )
         )
-    
+
         Set-NewTempItemAcl -ItemType Directory -Path $ContextParams.Path -AccessRulesToAdd $TempAccessRules
-    
+
         It 'Should Throw When Test-TargetResource is run' {
-            
+
             { Test-TargetResource @ContextParams }| Should Throw
         }
     }
@@ -340,7 +340,7 @@ Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Prese
             Path = $pathName
             AccessControlList = $TempAcl
         }
-    
+
         $TempAccessRules = @(
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
                 -ArgumentList @(
@@ -350,7 +350,7 @@ Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Prese
                     'None',
                     'Allow'
                 )
-        
+
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
                 -ArgumentList @(
                     $TempAcl.Principal,
@@ -359,7 +359,7 @@ Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Prese
                     'None',
                     'Allow'
                 )
-        
+
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
                 -ArgumentList @(
                     $TempAcl.Principal,
@@ -369,11 +369,11 @@ Describe "$DSCResourceName\Test-TargetResource behavior with Ensure set to Prese
                     'Allow'
                 )
         )
-    
+
         Set-NewTempItemAcl -ItemType Directory -Path $ContextParams.Path -AccessRulesToAdd $TempAccessRules
-    
+
         It 'Should Throw When Test-TargetResource is run' {
-            
+
             { Test-TargetResource @ContextParams }| Should Throw
         }
     }
@@ -387,7 +387,7 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Absent
             Path = $pathName
             AccessControlList = $TempAcl
         }
-        
+
         $TempAccessRules = @(
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
                 -ArgumentList @(
@@ -397,7 +397,7 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Absent
                     'None',
                     'Allow'
                 )
-        
+
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
                 -ArgumentList @(
                     $TempAcl.Principal,
@@ -406,7 +406,7 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Absent
                     'None',
                     'Allow'
                 )
-        
+
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
                 -ArgumentList @(
                     $TempAcl.Principal,
@@ -416,11 +416,11 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Absent
                     'Allow'
                 )
         )
-        
+
         Set-NewTempItemAcl -ItemType Directory -Path $ContextParams.Path -AccessRulesToAdd $TempAccessRules
-        
+
         It 'Should Throw When Set-TargetResource is run' {
-            
+
             { Set-TargetResource @ContextParams }| Should Throw
         }
     }
@@ -470,7 +470,7 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Absent
 
             (Get-Acl -Path $ContextParams.Path).Access.Where(
                 {$_.IsInherited -eq $false -and $_.IdentityReference -eq $TempAcl.Principal}
-            ).Count | 
+            ).Count |
             Should Be $TempAccessRules.Count
 
             Test-TargetResource @ContextParams | Should Be $false
@@ -530,7 +530,7 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Absent
 
             (Get-Acl -Path $ContextParams.Path).Access.Where(
                 {$_.IsInherited -eq $false -and $_.IdentityReference -eq $TempAcl.Principal}
-            ).Count | 
+            ).Count |
             Should Be $TempAccessRules.Count
 
             Test-TargetResource @ContextParams | Should Be $true
@@ -590,7 +590,7 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Absent
 
             (Get-Acl -Path $ContextParams.Path).Access.Where(
                 {$_.IsInherited -eq $false -and $_.IdentityReference -eq $TempAcl.Principal}
-            ).Count | 
+            ).Count |
             Should Be $TempAccessRules.Count
 
             Test-TargetResource @ContextParams | Should Be $false
@@ -640,7 +640,7 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Absent
 
             (Get-Acl -Path $ContextParams.Path).Access.Where(
                 {$_.IsInherited -eq $false -and $_.IdentityReference -eq $TempAcl.Principal}
-            ).Count | 
+            ).Count |
             Should Be $TempAccessRules.Count
 
             Test-TargetResource @ContextParams | Should Be $false
@@ -665,7 +665,7 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Presen
             Path = $pathName
             AccessControlList = $TempAcl
         }
-    
+
         $TempAccessRules = @(
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
                 -ArgumentList @(
@@ -675,7 +675,7 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Presen
                     'None',
                     'Allow'
                 )
-    
+
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
                 -ArgumentList @(
                     $TempAcl.Principal,
@@ -684,7 +684,7 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Presen
                     'None',
                     'Allow'
                 )
-    
+
             New-Object -TypeName System.Security.AccessControl.FileSystemAccessRule `
                 -ArgumentList @(
                     $TempAcl.Principal,
@@ -694,11 +694,11 @@ Describe "$DSCResourceName\Set-TargetResource behavior with Ensure set to Presen
                     'Allow'
                 )
         )
-    
+
         Set-NewTempItemAcl -ItemType Directory -Path $ContextParams.Path -AccessRulesToAdd $TempAccessRules
-    
+
         It 'Should Throw When Set-TargetResource is run' {
-            
+
             { Set-TargetResource @ContextParams }| Should Throw
         }
     }
@@ -976,7 +976,7 @@ Describe "$DSCResourceName\Get-NtfsInheritenceFlag" {
 
         It "Should return 2-0" {
             $InheritanceFlags = Get-NtfsInheritenceFlag -Inheritance "This folder and files"
-             
+
             $InheritanceFlags.InheritanceFlag | Should be 2
             $InheritanceFlags.PropagationFlag | Should be 0
         }
@@ -1000,7 +1000,7 @@ Describe "$DSCResourceName\Get-NtfsInheritenceFlag" {
 
             $InheritanceFlags.InheritanceFlag | Should be 2
             $InheritanceFlags.PropagationFlag | Should be 2
-        } 
+        }
 
         It "Should return null when abnormal Inheritance is passed" {
             $InheritanceFlags = Get-NtfsInheritenceFlag -Inheritance "The files are 'in' the computer."
@@ -1015,49 +1015,49 @@ Describe "$DSCResourceName\Get-NtfsInheritenceName" {
     Context "Inheritance and Propagation Flags" {
         It "Should return This folder only" {
             $InheritanceName = Get-NtfsInheritenceName -InheritanceFlag 0 -PropagationFlag 0
-    
+
             $InheritanceName | Should be "This folder only"
         }
-    
+
         It "Should return This folder subfolders and files" {
             $InheritanceName = Get-NtfsInheritenceName -InheritanceFlag 3 -PropagationFlag 0
-    
+
             $InheritanceName | Should be "This folder subfolders and files"
         }
-    
+
         It "Should return This folder and subfolders" {
             $InheritanceName = Get-NtfsInheritenceName -InheritanceFlag 1 -PropagationFlag 0
-    
+
             $InheritanceName | Should be "This folder and subfolders"
         }
-    
+
         It "Should return This folder and files" {
             $InheritanceName = Get-NtfsInheritenceName -InheritanceFlag 2 -PropagationFlag 0
-    
+
             $InheritanceName | Should be "This folder and files"
         }
-    
+
         It "Should return Subfolders and files only" {
             $InheritanceName = Get-NtfsInheritenceName -InheritanceFlag 3 -PropagationFlag 2
-    
+
             $InheritanceName | Should be "Subfolders and files only"
         }
-    
+
         It "Should return Subfolders Only" {
             $InheritanceName = Get-NtfsInheritenceName -InheritanceFlag 1 -PropagationFlag 2
-    
+
             $InheritanceName | Should be "Subfolders Only"
         }
-    
+
         It "Should return Files Only" {
             $InheritanceName = Get-NtfsInheritenceName -InheritanceFlag 2 -PropagationFlag 2
-    
+
             $InheritanceName | Should be "Files Only"
         }
-    
+
         It "Should return none if abnormal Inheritance and Propagation Flags are passed" {
             $InheritanceName = Get-NtfsInheritenceName -InheritanceFlag 4 -PropagationFlag 4
-    
+
             $InheritanceName | Should be "none"
         }
     }
@@ -1066,16 +1066,16 @@ Describe "$DSCResourceName\Get-NtfsInheritenceName" {
 Describe "$DSCResourceName\ConvertTo-FileSystemAccessRule" {
     Context "Should convert to a valid File System Access Rule" {
         It "Should return a FilseSystemAccessRule Object" {
-           $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights FullControl -Inheritance 'This Folder and Files' -Ensure Absent 
+           $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights FullControl -Inheritance 'This Folder and Files' -Ensure Absent
            $FileSystemAccessRule = ConvertTo-FileSystemAccessRule -AccessControlList $TempAcl -IdentityRef $TempAcl.Principal
-    
+
            $FileSystemAccessRule.Rules | Should BeOfType System.Security.AccessControl.FileSystemAccessRule
         }
-    
+
         It "Should return expected values" {
             $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights FullControl -Inheritance 'This Folder and Files' -Ensure Present
             $FileSystemAccessRule = ConvertTo-FileSystemAccessRule -AccessControlList $TempAcl -IdentityRef $TempAcl.Principal
-    
+
             $FileSystemAccessRule.Rules.FileSystemRights | Should Be "FullControl"
             $FileSystemAccessRule.Rules.AccessControlType | Should Be "Allow"
             $FileSystemAccessRule.Rules.IdentityReference | Should Be "Everyone"
@@ -1092,7 +1092,7 @@ Describe "$DSCResourceName\Compare-NtfsRule" {
         $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $true -AccessControlType Allow -FileSystemRights FullControl -Inheritance 'This Folder and Files' -Ensure Absent
         $ContextParams = @{
             Path = $pathName
-            AccessControlList = $TempAcl 
+            AccessControlList = $TempAcl
         }
 
         $TempAccessRules = @(
@@ -1130,7 +1130,7 @@ Describe "$DSCResourceName\Compare-NtfsRule" {
         $Identity = Resolve-Identity -Identity $Principal
         $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
         $ACLRules += ConvertTo-FileSystemAccessRule -AccessControlList $TempAcl -IdentityRef $IdentityRef
-        
+
         $currentACL = Get-Acl -Path $pathName
         $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
@@ -1147,7 +1147,7 @@ Describe "$DSCResourceName\Compare-NtfsRule" {
         $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $true -AccessControlType Allow -FileSystemRights "ReadAndExecute" -Inheritance "This folder subfolders and files" -Ensure Absent
         $ContextParams = @{
             Path = $pathName
-            AccessControlList = $TempAcl 
+            AccessControlList = $TempAcl
         }
 
         $TempAccessRules = @(
@@ -1185,14 +1185,14 @@ Describe "$DSCResourceName\Compare-NtfsRule" {
         $Identity = Resolve-Identity -Identity $Principal
         $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
         $ACLRules += ConvertTo-FileSystemAccessRule -AccessControlList $TempAcl -IdentityRef $IdentityRef
-        
+
         $currentACL = Get-Acl -Path $pathName
         $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
         It "Should have matching rule to be removed" {
             $testComparison = Compare-NtfsRule -Expected $ACLRules -Actual $actualAce -Force $TempAcl.ForcePrincipal
 
-            $testComparison.ToBeRemoved.Rule.Count | Should be ($actualAce.Count - $TempAcl.AccessControlEntry.Count) 
+            $testComparison.ToBeRemoved.Rule.Count | Should be ($actualAce.Count - $TempAcl.AccessControlEntry.Count)
             $testComparison.Absent.Count | Should Be $TempAcl.AccessControlEntry.Count
         }
     }
@@ -1202,7 +1202,7 @@ Describe "$DSCResourceName\Compare-NtfsRule" {
         $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $true -AccessControlType Allow -FileSystemRights "ReadAndExecute" -Inheritance "This folder subfolders and files" -Ensure Present
         $ContextParams = @{
             Path = $pathName
-            AccessControlList = $TempAcl 
+            AccessControlList = $TempAcl
         }
 
         $TempAccessRules = @(
@@ -1231,7 +1231,7 @@ Describe "$DSCResourceName\Compare-NtfsRule" {
         $Identity = Resolve-Identity -Identity $Principal
         $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
         $ACLRules += ConvertTo-FileSystemAccessRule -AccessControlList $TempAcl -IdentityRef $IdentityRef
-        
+
         $currentACL = Get-Acl -Path $pathName
         $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
@@ -1243,12 +1243,12 @@ Describe "$DSCResourceName\Compare-NtfsRule" {
         }
     }
 
-    Context "Compare-NtfsRule with Ensure set to Present with matching rules" { 
+    Context "Compare-NtfsRule with Ensure set to Present with matching rules" {
         $pathName = "$TestDrive\TestDirectory"
         $TempAcl = New-AccessControlList -Principal "Everyone" -ForcePrincipal $false -AccessControlType Allow -FileSystemRights "Modify" -Inheritance "This Folder Only" -Ensure Present
         $ContextParams = @{
             Path = $pathName
-            AccessControlList = $TempAcl 
+            AccessControlList = $TempAcl
         }
 
         $TempAccessRules = @(
@@ -1277,7 +1277,7 @@ Describe "$DSCResourceName\Compare-NtfsRule" {
         $Identity = Resolve-Identity -Identity $Principal
         $IdentityRef = [System.Security.Principal.NTAccount]::new($Identity.Name)
         $ACLRules += ConvertTo-FileSystemAccessRule -AccessControlList $TempAcl -IdentityRef $IdentityRef
-        
+
         $currentACL = Get-Acl -Path $pathName
         $actualAce = $currentAcl.Access.Where({$_.IdentityReference -eq $Identity.Name})
 
@@ -1299,7 +1299,7 @@ Describe "$DSCResourceName\ResourceHelper\Resolve-Identity" {
             $Identity.Name | Should be "LOCAL"
             $Identity.SID | Should be "S-1-2-0"
         }
-    
+
         It "Should resolve when input is an SID" {
             $Identity = Resolve-Identity -Identity "S-1-2-0"
 
@@ -1323,6 +1323,43 @@ Describe "$DSCResourceName\ResourceHelper\ConvertTo-SID" {
             $SID = ConvertTo-SID -IdentityReference "BUILTIN\Users"
 
             $SID.Value | Should be "S-1-5-32-545"
-        } 
+        }
+    }
+}
+
+Describe "$DSCResourceName\ResourceHelper\Remove-NtPrincipalDomain" {
+    Context 'Identity will have the domain removed' {
+        $identity = [System.Security.Principal.NTAccount]::new('userDomain', 'userPrincipal')
+        $result = Remove-NtPrincipalDomain -Identity $identity
+
+        It 'Should be a System.Security.Principal.NTAccount Object' {
+            $result | Should -BeOfType System.Security.Principal.NTAccount
+        }
+
+        It 'Should return a domain-less/workgroup-less userPrincipal' {
+            $result.ToString() | Should -Be 'userPrincipal'
+        }
+    }
+}
+
+Describe "$DSCResourceName\NTFSAccessEntry\Update-NtfsAccessControlEntry" {
+    Context 'Update a FileSystemAccessRule' {
+        Mock -CommandName Remove-NtPrincipalDomain -MockWith {
+            [System.Security.Principal.NTAccount]::new('userPrincipal')
+        }
+        $identity = [System.Security.Principal.NTAccount]::new('userDomain', 'userPrincipal')
+        $ace = [System.Security.AccessControl.FileSystemAccessRule]::new($identity, 'FullControl', 'Allow')
+        $modifiedId = [System.Security.Principal.NTAccount]::new('userPrincipal')
+        $result = Update-NtfsAccessControlEntry -AccessControlEntry $ace
+
+        It 'Should be a System.Security.AccessControl.FileSystemAccessRule Object' {
+            $result | Should -BeOfType System.Security.AccessControl.FileSystemAccessRule
+        }
+
+        It 'Should update a FileSystemAccessRule with the correct ACE and UserPrincipal' {
+            $result.IdentityReference | Should -Be $modifiedId
+            $result.FileSystemRights  | Should -Be $ace.FileSystemRights
+            $result.AccessControlType | Should -Be $ace.AccessControlType
+        }
     }
 }
