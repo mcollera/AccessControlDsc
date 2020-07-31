@@ -438,3 +438,28 @@ function Get-InputPath
 
     return $returnPath
 }
+
+<#
+    .SYNOPSIS
+        Removes the domain from an NT Principal
+    .DESCRIPTION
+        Removes the domain from an NT Principal
+    .PARAMETER Identity
+        Specifies the identity of the principal.
+#>
+function Remove-NtPrincipalDomain
+{
+    [CmdletBinding()]
+    [OutputType([System.Security.Principal.NTAccount])]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [System.Security.Principal.NTAccount]
+        $Identity
+    )
+
+    $modifiedIdentity = $Identity.ToString() -replace '.*\\'
+    $returnIdentity = New-Object -Type System.Security.Principal.NTAccount -ArgumentList $modifiedIdentity
+    return $returnIdentity
+}

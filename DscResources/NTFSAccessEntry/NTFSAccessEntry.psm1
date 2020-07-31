@@ -156,6 +156,12 @@ Function Set-TargetResource
                 {
                     foreach ($ace in $currentAcl.Access)
                     {
+                        # Added this condition and function to address Win32 API Bug: https://github.com/PowerShell/Win32-OpenSSH/issues/750
+                        if ($ace.IdentityReference -match 'APPLICATION PACKAGE AUTHORITY\\.*')
+                        {
+                            $ace = Update-NtfsAccessControlEntry -AccessControlEntry $ace
+                        }
+
                         $currentAcl.RemoveAccessRuleAll($ace)
                         Write-CustomVerboseMessage -Action 'ActionRemoveAccess' -Path $inputPath -Rule $ace
                     }
@@ -363,6 +369,15 @@ Function ConvertTo-FileSystemAccessRule
     )
 
     $referenceRule = @()
+
+    if
+    (
+        $IdentityRef -match 'APPLICATION PACKAGE AUTHORITY\\.*' -and
+        (Get-PSCallStack)[1].Command -eq 'Set-TargetResource'
+    )
+    {
+        $identityRef = Remove-NtPrincipalDomain -Identity $IdentityRef
+    }
 
     foreach ($ace in $AccessControlList.AccessControlEntry)
     {
@@ -638,4 +653,24 @@ function Test-FileSystemAccessRuleMatch
                 $_.IdentityReference -eq $ReferenceRule.IdentityReference
         })
     }
+}
+
+function Update-NtfsAccessControlEntry
+{
+    [CmdletBinding()]
+    [OutputType([System.Security.AccessControl.FileSystemAccessRule])]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [System.Security.AccessControl.FileSystemAccessRule]
+        $AccessControlEntry
+    )
+
+    $identity = Remove-NtPrincipalDomain -Identity $AccessControlEntry.IdentityReference
+    $ace = New-Object -Type System.Security.AccessControl.FileSystemAccessRule -ArgumentList (
+        $identity,
+        $AccessControlEntry.FileSystemRights,
+        $AccessControlEntry.AccessControlType
+    )
+    return $ace
 }
