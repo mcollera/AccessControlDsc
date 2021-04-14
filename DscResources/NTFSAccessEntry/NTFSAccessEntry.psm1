@@ -48,12 +48,11 @@ Function Get-TargetResource
 
     $nameSpace = "root/Microsoft/Windows/DesiredStateConfiguration"
     $cimAccessControlList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
-    $inputPath = Get-InputPath($Path)
+    $inputPath = Get-InputPath -Path $Path
 
     if (Test-Path -Path $inputPath)
     {
-        $fileSystemItem = Get-Item -Path $inputPath -ErrorAction Stop
-        $currentAcl = $fileSystemItem.GetAccessControl('Access')
+        $currentAcl = Get-AccessControl -Path $inputPath -AccessControlSection 'Access'
 
         if ($null -ne $currentAcl)
         {
@@ -133,12 +132,11 @@ Function Set-TargetResource
 
     $aclRules = @()
 
-    $inputPath = Get-InputPath($Path)
+    $inputPath = Get-InputPath -Path $Path
 
     if (Test-Path -Path $inputPath)
     {
-        $fileSystemItem = Get-Item -Path $inputPath
-        $currentAcl = $fileSystemItem.GetAccessControl('Access')
+        $currentAcl = Get-AccessControl -Path $inputPath -AccessControlSection 'Access'
 
         if ($null -ne $currentAcl)
         {
@@ -190,8 +188,8 @@ Function Set-TargetResource
             if ($isInherited -gt 0)
             {
                 $currentAcl.SetAccessRuleProtection($true, $true)
-                $fileSystemItem.SetAccessControl($currentAcl)
-                $currentAcl = $fileSystemItem.GetAccessControl('Access')
+                Set-AccessControl -Path $inputPath -Acl $currentAcl
+                $currentAcl = Get-AccessControl -Path $inputPath -AccessControlSection 'Access'
             }
 
             foreach ($rule in $toBeRemoved.Rule)
@@ -224,7 +222,7 @@ Function Set-TargetResource
                 $currentAcl.AddAccessRule($rule)
             }
 
-            $fileSystemItem.SetAccessControl($currentAcl)
+            Set-AccessControl -Path $inputPath -Acl $currentAcl
         }
         else
         {
@@ -257,14 +255,12 @@ Function Test-TargetResource
     )
 
     $aclRules = @()
-
-    $inDesiredState = $True
-    $inputPath = Get-InputPath($Path)
+    $inDesiredState = $true
+    $inputPath = Get-InputPath -Path $Path
 
     if (Test-Path -Path $inputPath)
     {
-        $fileSystemItem = Get-Item -Path $inputPath
-        $currentAcl = $fileSystemItem.GetAccessControl('Access')
+        $currentAcl = Get-AccessControl -Path $inputPath -AccessControlSection 'Access'
         $mappedAcl = Update-FileSystemRightsMapping($currentAcl)
 
         if ($null -ne $currentAcl)
@@ -666,11 +662,102 @@ function Update-NtfsAccessControlEntry
         $AccessControlEntry
     )
 
+    try
+    {
+        # there are cases where the permission does not enum correctly, detecting this case and handling accordingly
+        $fileSystemRightsString = $AccessControlEntry.FileSystemRights.ToString()
+        $fileSystemRights = [System.Security.AccessControl.FileSystemRights]$fileSystemRightsString
+    }
+    catch
+    {
+        switch ($fileSystemRightsString)
+        {
+            '268435456'   {[System.Security.AccessControl.FileSystemRights]$fileSystemRights = 'FullControl'}
+            '-536805376'  {[System.Security.AccessControl.FileSystemRights]$fileSystemRights = 'Modify', 'Synchronize'}
+            '-1610612736' {[System.Security.AccessControl.FileSystemRights]$fileSystemRights = 'ReadAndExecute', 'Synchronize'}
+        }
+    }
+
     $identity = Remove-NtPrincipalDomain -Identity $AccessControlEntry.IdentityReference
     $ace = New-Object -Type System.Security.AccessControl.FileSystemAccessRule -ArgumentList (
         $identity,
-        $AccessControlEntry.FileSystemRights,
+        $fileSystemRights,
         $AccessControlEntry.AccessControlType
     )
     return $ace
+}
+
+function Get-AccessControl
+{
+    [CmdletBinding()]
+    [OutputType(
+        [System.Security.AccessControl.DirectorySecurity],
+        [System.Security.AccessControl.FileSecurity]
+    )]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [String]
+        $Path,
+
+        [Parameter(Mandatory = $false)]
+        [System.Security.AccessControl.AccessControlSections]
+        $AccessControlSection = 'Access'
+    )
+
+    try
+    {
+        $fileSystemItem = Get-Item -Path $Path -ErrorAction Stop
+    }
+    catch
+    {
+        throw $_
+    }
+
+    if ($fileSystemItem.PSIsContainer -eq $true)
+    {
+        return [System.Security.AccessControl.DirectorySecurity]::new($fileSystemItem.FullName, $AccessControlSection)
+    }
+    else
+    {
+        return [System.Security.AccessControl.FileSecurity]::new($fileSystemItem.FullName, $AccessControlSection)
+    }
+}
+
+function Set-AccessControl
+{
+    [CmdletBinding()]
+    [OutputType()]
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [String]
+        $Path,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateScript({
+            $_ -is [System.Security.AccessControl.DirectorySecurity] -or
+            $_ -is [System.Security.AccessControl.FileSecurity]
+        })]
+        [object]
+        $Acl
+    )
+
+    try
+    {
+        $fileSystemItem = Get-Item -Path $Path -ErrorAction Stop
+    }
+    catch
+    {
+        throw $_
+    }
+
+    if ($PSVersionTable.PSVersion -gt [version]'7.0')
+    {
+        [System.IO.FileSystemAclExtensions]::SetAccessControl($fileSystemItem, $Acl)
+    }
+    else
+    {
+        $fileSystemItem.SetAccessControl($Acl)
+    }
 }
