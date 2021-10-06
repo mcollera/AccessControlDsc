@@ -1,17 +1,29 @@
-Import-Module -Name (Join-Path -Path ( Split-Path $PSScriptRoot -Parent ) `
-                               -ChildPath 'AccessControlResourceHelper\AccessControlResourceHelper.psm1') `
-                               -Force
+$resourceRootPath = Split-Path -Path $PSScriptRoot -Parent
+$resourceHelperPath = Join-Path -Path $resourceRootPath -ChildPath 'AccessControlResourceHelper'
+$resourceHelperPsm1 = Join-Path -Path $resourceHelperPath -ChildPath 'AccessControlResourceHelper.psm1'
+Import-Module -Name $resourceHelperPsm1 -Force
 
-# Localized messages
-data LocalizedData
+try
 {
-    # culture="en-US"
-    ConvertFrom-StringData -StringData @'
-        ErrorPathNotFound = The requested path "{0}" cannot be found.
-        AclNotFound = Error obtaining "{0}" ACL
-        AclFound = Obtained "{0}" ACL
-        RemoveAccessError = "Unable to remove Access for "{0}"
-'@
+    $importLocalizedDataParams = @{
+        BaseDirectory = $resourceHelperPath
+        UICulture     = $PSUICulture
+        FileName      = 'AccessControlResourceHelper.strings.psd1'
+        ErrorAction   = 'Stop'
+    }
+    $script:localizedData = Import-LocalizedData @importLocalizedDataParams
+}
+catch
+{
+    $importLocalizedDataParams.UICulture = 'en-US'
+    try
+    {
+        $script:localizedData = Import-LocalizedData @importLocalizedDataParams
+    }
+    catch
+    {
+        throw 'Unable to load localized data'
+    }
 }
 
 Function Get-TargetResource
@@ -32,68 +44,68 @@ Function Get-TargetResource
         [bool]
         $Force = $false
     )
-    
+
     Assert-Module -ModuleName 'ActiveDirectory'
     Import-Module -Name 'ActiveDirectory' -Verbose:$false
-    
-    $NameSpace = "root/Microsoft/Windows/DesiredStateConfiguration"
-    $CimAccessControlList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
 
-    $Path = Join-Path -Path "ad:\" -ChildPath $DistinguishedName
+    $nameSpace = "root/Microsoft/Windows/DesiredStateConfiguration"
+    $cimAccessControlList = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
 
-    if(Test-Path -Path $Path)
+    $path = Join-Path -Path "AD:\" -ChildPath $DistinguishedName
+
+    if (Test-Path -Path $path)
     {
-        $currentACL = Get-Acl -Path $Path -Audit -ErrorAction Stop
+        $currentACL = Get-Acl -Path $path -Audit -ErrorAction Stop
 
-        if($null -ne $currentACL)
+        if ($null -ne $currentACL)
         {
-            $message = $LocalizedData.AclFound -f $Path
+            $message = $localizedData.AclFound -f $path
             Write-Verbose -Message $message
-            
-            foreach($Principal in $AccessControlList)
+
+            foreach ($principal in $AccessControlList)
             {
-                $CimAccessControlEntry = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
+                $cimAccessControlEntry = New-Object -TypeName 'System.Collections.ObjectModel.Collection`1[Microsoft.Management.Infrastructure.CimInstance]'
 
-                $PrincipalName = $Principal.Principal
-                $ForcePrincipal = $Principal.ForcePrincipal
+                $principalName = $principal.Principal
+                $forcePrincipal = $principal.ForcePrincipal
 
-                $Identity = Resolve-Identity -Identity $PrincipalName
-                $currentPrincipalAccess = $currentACL.Audit.Where({$_.IdentityReference -eq $Identity.Name})
+                $identity = Resolve-Identity -Identity $principalName
+                $currentPrincipalAccess = $currentACL.Audit.Where({$_.IdentityReference -eq $identity.Name})
 
-                foreach($Access in $currentPrincipalAccess)
+                foreach ($access in $currentPrincipalAccess)
                 {
-                    $AuditFlags = $Access.AuditFlags.ToString()
-                    $ActiveDirectoryRights = $Access.ActiveDirectoryRights.ToString().Split(',').Trim()
-                    $InheritanceType = $Access.InheritanceType.ToString()
-                    $InheritedObjectType = $Access.InheritedObjectType.ToString()
+                    $auditFlags = $access.AuditFlags.ToString()
+                    $activeDirectoryRights = $access.ActiveDirectoryRights.ToString().Split(',').Trim()
+                    $inheritanceType = $access.InheritanceType.ToString()
+                    $inheritedObjectType = $access.InheritedObjectType.ToString()
 
-                    $CimAccessControlEntry += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectoryAuditRule -Property @{
-                                ActiveDirectoryRights = @($ActiveDirectoryRights)
-                                AuditFlags = $AuditFlags
-                                InheritanceType = $InheritanceType
-                                InheritedObjectType = $InheritedObjectType
-                                Ensure = ""
-                            }
+                    $cimAccessControlEntry += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectoryAuditRule -Property @{
+                        ActiveDirectoryRights = @($activeDirectoryRights)
+                        AuditFlags = $auditFlags
+                        InheritanceType = $inheritanceType
+                        InheritedObjectType = $inheritedObjectType
+                        Ensure = ""
+                    }
                 }
 
                 $CimAccessControlList += New-CimInstance -ClientOnly -Namespace $NameSpace -ClassName ActiveDirectorySystemAccessControlList -Property @{
-                                Principal = $PrincipalName
-                                ForcePrincipal = $ForcePrincipal
-                                AccessControlEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($CimAccessControlEntry)
-                            }
+                    Principal = $principalName
+                    ForcePrincipal = $forcePrincipal
+                    AccessControlEntry = [Microsoft.Management.Infrastructure.CimInstance[]]@($cimAccessControlEntry)
+                }
             }
 
         }
         else
         {
-            $message = $LocalizedData.AclNotFound -f $Path
+            $message = $localizedData.AclNotFound -f $path
             Write-Verbose -Message $message
         }
     }
     else
     {
-        $Message = $LocalizedData.ErrorPathNotFound -f $Path
-        Write-Verbose -Message $Message
+        $message = $localizedData.ErrorPathNotFound -f $path
+        Write-Verbose -Message $message
     }
 
     $ReturnValue = @{
@@ -122,128 +134,98 @@ Function Set-TargetResource
         [bool]
         $Force = $false
     )
- 
+
     Assert-Module -ModuleName 'ActiveDirectory'
     Import-Module -Name 'ActiveDirectory' -Verbose:$false
- 
-    $Path = Join-Path -Path "ad:\" -ChildPath $DistinguishedName
-    
-    if(Test-Path -Path $Path)
+
+    $path = Join-Path -Path "AD:\" -ChildPath $DistinguishedName
+
+    if (Test-Path -Path $path)
     {
-        $currentAcl = Get-Acl -Path $Path -Audit
-        if($null -ne $currentAcl)
+        $currentAcl = Get-Acl -Path $path -Audit
+        if ($null -ne $currentAcl)
         {
-            if($Force)
+            if ($Force)
             {
-                foreach($AccessControlItem in $AccessControlList)
+                # If inheritance is set, disable it and clear inherited audit rules
+                if (-not $currentAcl.AreAuditRulesProtected)
                 {
-                    $Principal = $AccessControlItem.Principal
-                    $Identity = Resolve-Identity -Identity $Principal
-                    $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
+                    $currentAcl.SetAuditRuleProtection($true, $false)
+                    Write-Verbose -Message ($localizedData.ResetDisableInheritance)
+                }
 
-                    $ACLRules += ConvertTo-ActiveDirectoryAuditRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
-                }    
-        
-                $actualAce = $currentAcl.Audit
-
-                $Results = Compare-ActiveDirectoryAuditRule -Expected $ACLRules -Actual $actualAce
-
-                $Expected = $Results.Rules
-                $AbsentToBeRemoved = $Results.Absent
-                $ToBeRemoved = $Results.ToBeRemoved
-            }
-            else
-            {
-                foreach($AccessControlItem in $AccessControlList)
+                # Removing all audit rules to ensure a blank list
+                if ($null -ne $currentAcl.Audit)
                 {
-                    $Principal = $AccessControlItem.Principal
-                    $Identity = Resolve-Identity -Identity $Principal
-                    $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
-
-                    $actualAce = $currentAcl.Audit.Where({$_.IdentityReference -eq $Identity.Name})
-
-                    $ACLRules = ConvertTo-ActiveDirectoryAuditRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
-                    $Results = Compare-ActiveDirectoryAuditRule -Expected $ACLRules -Actual $actualAce
-
-                    $Expected += $Results.Rules
-                    $AbsentToBeRemoved += $Results.Absent
-
-                    if($AccessControlItem.ForcePrinciPal)
+                    foreach ($rule in $currentAcl.Audit)
                     {
-                        $ToBeRemoved += $Results.ToBeRemoved
+                        $ruleRemoval = $currentAcl.RemoveAuditRule($rule)
+                        if (-not $ruleRemoval)
+                        {
+                            $currentAcl.RemoveAuditRuleSpecific($rule)
+                        }
+                        Write-CustomVerboseMessage -Action 'ActionRemoveAudit' -Path $path -Rule $rule
                     }
                 }
             }
 
-            $isInherited = 0
-            $isInherited += $AbsentToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
-            $isInherited += $ToBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
-
-            if($isInherited -gt 0)
+            foreach ($accessControlItem in $AccessControlList)
             {
-                $currentAcl.SetAuditRuleProtection($true,$true)
-                Set-Acl -Path $Path -AclObject $currentAcl
-            }
+                $principal = $accessControlItem.Principal
+                $identity = Resolve-Identity -Identity $principal
+                $identityRef = New-Object System.Security.Principal.NTAccount($identity.Name)
+                $actualAce = $currentAcl.Audit.Where({$_.IdentityReference -eq $identity.Name})
+                $aclRules = ConvertTo-ActiveDirectoryAuditRule -AccessControlList $accessControlItem -IdentityRef $identityRef
+                $results = Compare-ActiveDirectoryAuditRule -Expected $aclRules -Actual $actualAce
+                $expected += $results.Rules
+                $toBeRemoved += $results.Absent
 
-            foreach($Rule in $Expected)
-            {
-                if($Rule.Match -eq $false)
+                if ($accessControlItem.ForcePrinciPal)
                 {
-                    $NonMatch = $Rule.Rule
-                    ("Adding audit rule:"),
-                    ("> Path                  : '{0}'" -f $Path),
-                    ("> IdentityReference     : '{0}'" -f $NonMatch.IdentityReference),
-                    ("> ActiveDirectoryRights : '{0}'" -f $NonMatch.ActiveDirectoryRights),
-                    ("> AuditFlags            : '{0}'" -f $NonMatch.AuditFlags),
-                    ("> InheritanceType       : '{0}'" -f $NonMatch.InheritanceType),
-                    ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType)) |
-                    Write-Verbose
-
-                    $currentAcl.AddAuditRule($Rule.Rule)
+                    $toBeRemoved += $results.ToBeRemoved
                 }
             }
 
-            foreach($Rule in $AbsentToBeRemoved)
-            {
-                $NonMatch = $Rule.Rule
-                ("Removing audit rule:"),
-                ("> Path                  : '{0}'" -f $Path),
-                ("> IdentityReference     : '{0}'" -f $NonMatch.IdentityReference),
-                ("> ActiveDirectoryRights : '{0}'" -f $NonMatch.ActiveDirectoryRights),
-                ("> AuditFlags            : '{0}'" -f $NonMatch.AuditFlags),
-                ("> InheritanceType       : '{0}'" -f $NonMatch.InheritanceType),
-                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType)) |
-                Write-Verbose
+            $isInherited = $toBeRemoved.Rule.Where({$_.IsInherited -eq $true}).Count
 
-                $currentAcl.RemoveAuditRule($Rule.Rule)
+            if ($isInherited -gt 0)
+            {
+                $currentAcl.SetAuditRuleProtection($true,$true)
+                Set-Acl -Path $path -AclObject $currentAcl
+                $currentAcl = Get-Acl -Path $path -Audit
             }
 
-            foreach($Rule in $ToBeRemoved)
+            foreach ($rule in $expected)
             {
-                $NonMatch = $Rule.Rule
-                ("Removing audit rule:"),
-                ("> Path                  : '{0}'" -f $Path),
-                ("> IdentityReference     : '{0}'" -f $NonMatch.IdentityReference),
-                ("> ActiveDirectoryRights : '{0}'" -f $NonMatch.ActiveDirectoryRights),
-                ("> AuditFlags            : '{0}'" -f $NonMatch.AuditFlags),
-                ("> InheritanceType       : '{0}'" -f $NonMatch.InheritanceType),
-                ("> InheritedObjectType : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType)) |
-                Write-Verbose
-                $currentAcl.RemoveAuditRule($Rule.Rule)
+                if ($rule.Match -eq $false)
+                {
+                    $currentAcl.AddAuditRule($rule.Rule)
+                    Write-CustomVerboseMessage -Action 'ActionAddAudit' -Path $path -Rule $rule.Rule
+                }
             }
 
-            Set-Acl -Path $Path -AclObject $currentAcl
+            foreach ($rule in $toBeRemoved.Rule)
+            {
+                $ruleRemoval = $currentAcl.RemoveAuditRule($rule)
+                if (-not $ruleRemoval)
+                {
+                    $currentAcl.RemoveAuditRuleSpecific($rule)
+                }
+                Write-CustomVerboseMessage -Action 'ActionRemoveAudit' -Path $path -Rule $rule
+            }
+
+            Set-Acl -Path $path -AclObject $currentAcl
         }
         else
         {
-            $message = $LocalizedData.AclNotFound -f $Path
+            $message = $localizedData.AclNotFound -f $path
             Write-Verbose -Message $message
         }
     }
     else
     {
-        $Message = $LocalizedData.ErrorPathNotFound -f $Path
-        Write-Verbose -Message $Message
+        $message = $localizedData.ErrorPathNotFound -f $path
+        Write-Verbose -Message $message
     }
 }
 
@@ -269,124 +251,101 @@ Function Test-TargetResource
     Assert-Module -ModuleName 'ActiveDirectory'
     Import-Module -Name 'ActiveDirectory' -Verbose:$false
 
-    $InDesiredState = $True
-    $Path = Join-Path -Path "ad:\" -ChildPath $DistinguishedName
-    
-    if(Test-Path -Path $Path)
+    $inDesiredState = $true
+    $path = Join-Path -Path "AD:\" -ChildPath $DistinguishedName
+
+    if (Test-Path -Path $path)
     {
-        $currentACL = Get-Acl -Path $Path -Audit
+        $currentACL = Get-Acl -Path $path -Audit
 
-        if($null -ne $currentACL)
+        if ($null -ne $currentACL)
         {
-            if($Force)
+            if ($Force)
             {
-                foreach($AccessControlItem in $AccessControlList)
+                if ($currentAcl.AreAuditRulesProtected -eq $false)
                 {
-                    $Principal = $AccessControlItem.Principal
-                    $Identity = Resolve-Identity -Identity $Principal
-                    $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
+                    Write-Verbose -Message ($localizedData.InheritanceDetectedForce -f $Force, $path)
+                    return $false
+                }
 
-                    $ACLRules += ConvertTo-ActiveDirectoryAuditRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
-                }    
-        
+                foreach ($accessControlItem in $AccessControlList)
+                {
+                    $principal = $accessControlItem.Principal
+                    $identity = Resolve-Identity -Identity $principal
+                    $identityRef = New-Object System.Security.Principal.NTAccount($identity.Name)
+                    $aclRules += ConvertTo-ActiveDirectoryAuditRule -AccessControlList $accessControlItem -IdentityRef $identityRef
+                }
+
                 $actualAce = $currentAcl.Audit
-
-                $Results = Compare-ActiveDirectoryAuditRule -Expected $ACLRules -Actual $actualAce
-
-                $Expected = $Results.Rules
-                $AbsentToBeRemoved = $Results.Absent
-                $ToBeRemoved = $Results.ToBeRemoved
+                $results = Compare-ActiveDirectoryAuditRule -Expected $aclRules -Actual $actualAce
+                $expected = $results.Rules
+                $absentToBeRemoved = $results.Absent
+                $toBeRemoved = $results.ToBeRemoved
             }
             else
             {
-                foreach($AccessControlItem in $AccessControlList)
+                foreach ($accessControlItem in $AccessControlList)
                 {
-                    $Principal = $AccessControlItem.Principal
-                    $Identity = Resolve-Identity -Identity $Principal
-                    $IdentityRef = New-Object System.Security.Principal.NTAccount($Identity.Name)
+                    $principal = $accessControlItem.Principal
+                    $identity = Resolve-Identity -Identity $principal
+                    $identityRef = New-Object System.Security.Principal.NTAccount($identity.Name)
+                    $aclRules = ConvertTo-ActiveDirectoryAuditRule -AccessControlList $accessControlItem -IdentityRef $identityRef
+                    $actualAce = $currentAcl.Audit.Where( {$_.IdentityReference -eq $identity.Name})
+                    $results = Compare-ActiveDirectoryAuditRule -Expected $aclRules -Actual $actualAce
+                    $expected += $results.Rules
+                    $absentToBeRemoved += $results.Absent
 
-                    $ACLRules = ConvertTo-ActiveDirectoryAuditRule -AccessControlList $AccessControlItem -IdentityRef $IdentityRef
-
-                    $actualAce = $currentAcl.Audit.Where({$_.IdentityReference -eq $Identity.Name})
-
-                    $Results = Compare-ActiveDirectoryAuditRule -Expected $ACLRules -Actual $actualAce
-
-                    $Expected += $Results.Rules
-                    $AbsentToBeRemoved += $Results.Absent
-
-                    if($AccessControlItem.ForcePrincipal)
+                    if ($accessControlItem.ForcePrincipal)
                     {
-                        $ToBeRemoved += $Results.ToBeRemoved
+                        $toBeRemoved += $results.ToBeRemoved
                     }
-
                 }
             }
 
-            foreach($Rule in $Expected)
+            foreach ($rule in $expected)
             {
-                if($Rule.Match -eq $false)
+                if ($rule.Match -eq $false)
                 {
-                    $NonMatch = $Rule.Rule
-                    ("Found missing [present] audit rule:"),
-                    ("> Principal             : '{0}'" -f $Principal),
-                    ("> Path                  : '{0}'" -f $Path),
-                    ("> IdentityReference     : '{0}'" -f $NonMatch.IdentityReference),
-                    ("> ActiveDirectoryRights : '{0}'" -f $NonMatch.ActiveDirectoryRights),
-                    ("> AuditFlags            : '{0}'" -f $NonMatch.AuditFlags),
-                    ("> InheritanceType       : '{0}'" -f $NonMatch.InheritanceType),
-                    ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType)) |
-                    Write-Verbose
-
-                    $InDesiredState = $False
+                    Write-CustomVerboseMessage -Action 'ActionMissPresentAudit' -Path $path -Rule $rule.Rule
+                    $inDesiredState = $false
                 }
             }
 
-            if($AbsentToBeRemoved.Count -gt 0)
+            if ($absentToBeRemoved.Count -gt 0)
             {
-                $NonMatch = $Rule.Rule
-                ("Found [absent] audit rule:"),
-                ("> Principal             : '{0}'" -f $Principal),
-                ("> Path                  : '{0}'" -f $Path),
-                ("> IdentityReference     : '{0}'" -f $NonMatch.IdentityReference),
-                ("> ActiveDirectoryRights : '{0}'" -f $NonMatch.ActiveDirectoryRights),
-                ("> AuditFlags            : '{0}'" -f $NonMatch.AuditFlags),
-                ("> InheritanceType       : '{0}'" -f $NonMatch.InheritanceType),
-                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType))|
-                Write-Verbose
+                foreach ($rule in $absentToBeRemoved.Rule)
+                {
+                    Write-CustomVerboseMessage -Action 'ActionAbsentAudit' -Path $path -Rule $rule
+                }
 
-                $InDesiredState = $False
+                $inDesiredState = $false
             }
 
-            if($ToBeRemoved.Count -gt 0)
+            if ($toBeRemoved.Count -gt 0)
             {
-                $NonMatch = $Rule.Rule
-                ("Non-matching audit rule found:"),
-                ("> Principal             : '{0}'" -f $Principal),
-                ("> Path                  : '{0}'" -f $Path),
-                ("> IdentityReference     : '{0}'" -f $NonMatch.IdentityReference),
-                ("> ActiveDirectoryRights : '{0}'" -f $NonMatch.ActiveDirectoryRights),
-                ("> AuditFlags            : '{0}'" -f $NonMatch.AuditFlags),
-                ("> InheritanceType       : '{0}'" -f $NonMatch.InheritanceType),
-                ("> InheritedObjectType   : '{0}'" -f $(Get-SchemaObjectName -SchemaIdGuid $NonMatch.InheritedObjectType)) |
-                Write-Verbose
-                $InDesiredState = $False
+                foreach ($rule in $toBeRemoved.Rule)
+                {
+                    Write-CustomVerboseMessage -Action 'ActionNonMatchAudit' -Path $path -Rule $rule
+                }
+
+                $inDesiredState = $false
             }
         }
         else
         {
-            $message = $LocalizedData.AclNotFound -f $Path
+            $message = $localizedData.AclNotFound -f $path
             Write-Verbose -Message $message
-            $InDesiredState = $False
+            $inDesiredState = $false
         }
     }
     else
     {
-        $Message = $LocalizedData.ErrorPathNotFound -f $Path
-        Write-Verbose -Message $Message
-        $InDesiredState = $False
+        $message = $localizedData.ErrorPathNotFound -f $path
+        Write-Verbose -Message $message
+        $inDesiredState = $false
     }
-    
-    return $InDesiredState
+
+    return $inDesiredState
 }
 
 Function ConvertTo-ActiveDirectoryAuditRule
@@ -402,19 +361,37 @@ Function ConvertTo-ActiveDirectoryAuditRule
         $IdentityRef
     )
 
-    $refrenceObject = @()
+    $referenceRule = @()
 
-    foreach($ace in $AccessControlList.AccessControlEntry)
+    foreach ($ace in $AccessControlList.AccessControlEntry)
     {
-        $InheritedObjectType = Get-DelegationRightsGuid -ObjectName $ace.InheritedObjectType
+        # ActiveDirectoryAuditRule overloads require identity, adRights and auditFlags, adding the optional overloads, in order, via if statements
+        $auditRuleOverloads = @($IdentityRef, $ace.ActiveDirectoryRights, $ace.AuditFlags)
+
+        if ($null -ne $ace.ObjectType)
+        {
+            $auditRuleOverloads += Get-DelegationRightsGuid -ObjectName $ace.ObjectType
+        }
+
+        if ($null -ne $ace.InheritanceType)
+        {
+            $auditRuleOverloads += $ace.InheritanceType -as [int]
+        }
+
+        if (($null -ne $ace.InheritedObjectType) -and ($null -ne $ace.InheritanceType))
+        {
+            $auditRuleOverloads += Get-DelegationRightsGuid -ObjectName $ace.InheritedObjectType
+        }
+
         $rule = [PSCustomObject]@{
-            Rules = New-Object System.DirectoryServices.ActiveDirectoryAuditRule($IdentityRef, $ace.ActiveDirectoryRights, $ace.AuditFlags, $ace.InheritanceType, $InheritedObjectType)
+            Rules  = New-Object -TypeName System.DirectoryServices.ActiveDirectoryAuditRule -ArgumentList $auditRuleOverloads
             Ensure = $ace.Ensure
         }
-        $refrenceObject += $rule
+
+        $referenceRule += $rule
     }
 
-    return $refrenceObject
+    return $referenceRule
 }
 
 Function Compare-ActiveDirectoryAuditRule
@@ -427,77 +404,115 @@ Function Compare-ActiveDirectoryAuditRule
 
         [Parameter()]
         [System.DirectoryServices.ActiveDirectoryAuditRule[]]
-        $Actual
+        $Actual,
+
+        [Parameter()]
+        [bool]
+        $Force = $false
     )
 
     $results = @()
-    $ToBeRemoved = @()
-    $AbsentToBeRemoved = @()
+    $toBeRemoved = @()
+    $absentToBeRemoved = @()
 
-    $PresentRules = $Expected.Where({$_.Ensure -eq 'Present'}).Rules
-    $AbsentRules = $Expected.Where({$_.Ensure -eq 'Absent'}).Rules
-    foreach($refrenceObject in $PresentRules)
+    $presentRules = $Expected.Where({$_.Ensure -eq 'Present'}).Rules
+    $absentRules = $Expected.Where({$_.Ensure -eq 'Absent'}).Rules
+    foreach ($referenceRule in $presentRules)
     {
-        $match = $Actual.Where({
-            $_.ActiveDirectoryRights -eq $refrenceObject.ActiveDirectoryRights -and
-            $_.AuditFlags -eq $refrenceObject.AuditFlags -and
-            $_.InheritanceType -eq $refrenceObject.InheritanceType -and
-            $_.InheritedObjectType -eq $refrenceObject.InheritedObjectType -and
-            $_.IdentityReference -eq $refrenceObject.IdentityReference
-        })
-        if($match.Count -ge 1)
+        $match = Test-ActiveDirectoryAuditRuleMatch -ReferenceRule $referenceRule -DifferenceRule $Actual -Force $Force
+
+        if
+        (
+            ($match.Count -ge 1) -and
+            ($match.ActiveDirectoryRights.value__ -ge $referenceRule.ActiveDirectoryRights.value__)
+        )
         {
             $results += [PSCustomObject]@{
-                Rule = $refrenceObject
+                Rule  = $referenceRule
                 Match = $true
             }
         }
         else
         {
             $results += [PSCustomObject]@{
-                Rule = $refrenceObject
+                Rule  = $referenceRule
                 Match = $false
             }
         }
     }
 
-    foreach($refrenceObject in $AbsentRules)
+    foreach ($referenceRule in $absentRules)
     {
-        $match = $Actual.Where({
-            $_.ActiveDirectoryRights -eq $refrenceObject.ActiveDirectoryRights -and
-            $_.AuditFlags -eq $refrenceObject.AuditFlags -and
-            $_.InheritanceType -eq $refrenceObject.InheritanceType -and
-            $_.InheritedObjectType -eq $refrenceObject.InheritedObjectType -and
-            $_.IdentityReference -eq $refrenceObject.IdentityReference
-        })
-        if($match.Count -gt 0)
+        $match = Test-ActiveDirectoryAuditRuleMatch -ReferenceRule $referenceRule -DifferenceRule $Actual -Force $Force
+
+        if ($match.Count -gt 0)
         {
-            $AbsentToBeRemoved += [PSCustomObject]@{
-                Rule = $refrenceObject
+            $absentToBeRemoved += [PSCustomObject]@{
+                Rule = $match
             }
         }
     }
 
-    foreach($refrenceObject in $Actual)
+    foreach ($referenceRule in $Actual)
     {
-        $match = $Expected.Rules.Where({
-            $_.ActiveDirectoryRights -eq $refrenceObject.ActiveDirectoryRights -and
-            $_.AuditFlags -eq $refrenceObject.AuditFlags -and
-            $_.InheritanceType -eq $refrenceObject.InheritanceType -and
-            $_.InheritedObjectType -eq $refrenceObject.InheritedObjectType -and
-            $_.IdentityReference -eq $refrenceObject.IdentityReference
-        })
-        if($match.Count -eq 0)
+        $match = Test-ActiveDirectoryAuditRuleMatch -ReferenceRule $referenceRule -DifferenceRule $Expected.Rules -Force $Force
+
+        if ($match.Count -eq 0)
         {
-            $ToBeRemoved += [PSCustomObject]@{
-                Rule = $refrenceObject
+            $toBeRemoved += [PSCustomObject]@{
+                Rule = $referenceRule
             }
         }
     }
 
     return [PSCustomObject]@{
         Rules = $results
-        ToBeRemoved = $ToBeRemoved
-        Absent = $AbsentToBeRemoved
+        ToBeRemoved = $toBeRemoved
+        Absent = $absentToBeRemoved
+    }
+}
+
+function Test-ActiveDirectoryAuditRuleMatch
+{
+    param
+    (
+        [Parameter(Mandatory = $true)]
+        [System.DirectoryServices.ActiveDirectoryAuditRule[]]
+        [AllowEmptyCollection()]
+        $DifferenceRule,
+
+        [Parameter(Mandatory = $true)]
+        [System.DirectoryServices.ActiveDirectoryAuditRule]
+        $ReferenceRule,
+
+        [Parameter(Mandatory = $true)]
+        [bool]
+        $Force
+    )
+
+    if ($Force)
+    {
+        $DifferenceRule.Where({
+            $_.ActiveDirectoryRights -eq $ReferenceRule.ActiveDirectoryRights -and
+            $_.AuditFlags -eq $ReferenceRule.AuditFlags -and
+            $_.ObjectType -eq $ReferenceRule.ObjectType -and
+            $_.InheritanceType -eq $ReferenceRule.InheritanceType -and
+            $_.InheritedObjectType -eq $ReferenceRule.InheritedObjectType -and
+            $_.IdentityReference -eq $ReferenceRule.IdentityReference
+        })
+    }
+    else
+    {
+        $DifferenceRule.Where({
+            ($_.ActiveDirectoryRights.value__ -band $ReferenceRule.ActiveDirectoryRights.value__) -match
+            "$($_.ActiveDirectoryRights.value__)|$($ReferenceRule.ActiveDirectoryRights.value__)" -and
+            (($_.AuditFlags.value__ -eq 3 -and $ReferenceRule.AuditFlags.value__ -in 1..3) -or
+            ($_.AuditFlags.value__ -in 1..3 -and $ReferenceRule.AuditFlags.value__ -eq 0) -or
+            ($_.AuditFlags.value__ -eq $ReferenceRule.AuditFlags.value__)) -and
+            $_.ObjectType -eq $ReferenceRule.ObjectType -and
+            $_.InheritanceType -eq $ReferenceRule.InheritanceType -and
+            $_.InheritedObjectType -eq $ReferenceRule.InheritedObjectType -and
+            $_.IdentityReference -eq $ReferenceRule.IdentityReference
+        })
     }
 }

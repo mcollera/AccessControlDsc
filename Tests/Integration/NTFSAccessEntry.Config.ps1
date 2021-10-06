@@ -27,7 +27,7 @@ Configuration NTFSAccessEntry_Test
                             Inheritance = 'This folder and files'
                             Ensure = $TestParameter.Ensure
                         }
-                    )               
+                    )
                 }
             )
         }
