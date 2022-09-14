@@ -498,7 +498,7 @@ function Test-ActiveDirectoryAuditRuleMatch
             $_.ObjectType -eq $ReferenceRule.ObjectType -and
             $_.InheritanceType -eq $ReferenceRule.InheritanceType -and
             $_.InheritedObjectType -eq $ReferenceRule.InheritedObjectType -and
-            $_.IdentityReference -eq $ReferenceRule.IdentityReference
+            $_.IdentityReference.Value -eq $ReferenceRule.IdentityReference.Value
         })
     }
     else
@@ -512,7 +512,7 @@ function Test-ActiveDirectoryAuditRuleMatch
             $_.ObjectType -eq $ReferenceRule.ObjectType -and
             $_.InheritanceType -eq $ReferenceRule.InheritanceType -and
             $_.InheritedObjectType -eq $ReferenceRule.InheritedObjectType -and
-            $_.IdentityReference -eq $ReferenceRule.IdentityReference
+            $_.IdentityReference.Value -eq $ReferenceRule.IdentityReference.Value
         })
     }
 }

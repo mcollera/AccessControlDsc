@@ -400,7 +400,7 @@ Function Compare-ActiveDirectoryAccessRule
             $_.InheritanceType -eq $referenceObject.InheritanceType -and
             $_.InheritedObjectType -eq $referenceObject.InheritedObjectType -and
             $_.ObjectType -eq $referenceObject.ObjectType -and
-            $_.IdentityReference -eq $referenceObject.IdentityReference
+            $_.IdentityReference.Value -eq $referenceObject.IdentityReference.Value
         })
         if($match.Count -ge 1)
         {
@@ -426,7 +426,7 @@ Function Compare-ActiveDirectoryAccessRule
             $_.InheritanceType -eq $referenceObject.InheritanceType -and
             $_.InheritedObjectType -eq $referenceObject.InheritedObjectType -and
             $_.ObjectType -eq $referenceObject.ObjectType -and
-            $_.IdentityReference -eq $referenceObject.IdentityReference
+            $_.IdentityReference.Value -eq $referenceObject.IdentityReference.Value
         })
         if($match.Count -gt 0)
         {
@@ -444,7 +444,7 @@ Function Compare-ActiveDirectoryAccessRule
             $_.InheritanceType -eq $referenceObject.InheritanceType -and
             $_.InheritedObjectType -eq $referenceObject.InheritedObjectType -and
             $_.ObjectType -eq $referenceObject.ObjectType -and
-            $_.IdentityReference -eq $referenceObject.IdentityReference
+            $_.IdentityReference.Value -eq $referenceObject.IdentityReference.Value
         })
         if($match.Count -eq 0)
         {

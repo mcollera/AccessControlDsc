@@ -518,7 +518,7 @@ function Test-FileSystemAuditRuleMatch
             $_.AuditFlags -eq $ReferenceRule.AuditFlags -and
             $_.InheritanceFlags -eq $ReferenceRule.InheritanceFlags -and
             $_.PropagationFlags -eq $ReferenceRule.PropagationFlags -and
-            $_.IdentityReference -eq $ReferenceRule.IdentityReference
+            $_.IdentityReference.Value -eq $ReferenceRule.IdentityReference.Value
         })
     }
     else
@@ -537,7 +537,7 @@ function Test-FileSystemAuditRuleMatch
             ($_.PropagationFlags.value__ -in 1..3 -and $ReferenceRule.PropagationFlags.value__ -eq 0) -or
             ($_.PropagationFlags.value__ -eq $ReferenceRule.PropagationFlags.value__)) -and
 
-            $_.IdentityReference -eq $ReferenceRule.IdentityReference
+            $_.IdentityReference.Value -eq $ReferenceRule.IdentityReference.Value
         })
     }
 }
