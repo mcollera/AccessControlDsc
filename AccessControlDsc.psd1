@@ -4,7 +4,7 @@
 
 @{
     # Version number of this module.
-
+    
     ModuleVersion = '1.4.3'
 
     # ID used to uniquely identify this module

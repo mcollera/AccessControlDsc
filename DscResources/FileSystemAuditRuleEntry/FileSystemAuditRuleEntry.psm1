@@ -536,7 +536,6 @@ function Test-FileSystemAuditRuleMatch
             (($_.PropagationFlags.value__ -eq 3 -and $ReferenceRule.PropagationFlags.value__ -in 1..3) -or
             ($_.PropagationFlags.value__ -in 1..3 -and $ReferenceRule.PropagationFlags.value__ -eq 0) -or
             ($_.PropagationFlags.value__ -eq $ReferenceRule.PropagationFlags.value__)) -and
-
             $_.IdentityReference.Value -eq $ReferenceRule.IdentityReference.Value
         })
     }
