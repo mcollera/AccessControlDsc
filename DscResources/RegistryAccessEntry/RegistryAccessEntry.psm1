@@ -382,7 +382,7 @@ Function Compare-RegistryRule
                 $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
                 $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
                 $_.AccessControlType -eq $refrenceObject.AccessControlType -and
-                $_.IdentityReference -eq $refrenceObject.IdentityReference
+                $_.IdentityReference.Value -eq $refrenceObject.IdentityReference.Value
             })
         if ($match.Count -ge 1)
         {
@@ -403,13 +403,13 @@ Function Compare-RegistryRule
     foreach ($refrenceObject in $Actual)
     {
         $match = @($Expected.Rules).Where({
-                $_.RegistryRights -eq $refrenceObject.RegistryRights -and
-                $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
-                $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
-                $_.AccessControlType -eq $refrenceObject.AccessControlType -and
-                $_.IdentityReference -eq $refrenceObject.IdentityReference
-            })
-        if ($match.Count -eq 0)
+            $_.RegistryRights -eq $refrenceObject.RegistryRights -and
+            $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
+            $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
+            $_.AccessControlType -eq $refrenceObject.AccessControlType -and
+            $_.IdentityReference.Value -eq $refrenceObject.IdentityReference.Value
+        })
+        if($match.Count -eq 0)
         {
             $ToBeRemoved += [PSCustomObject]@{
                 Rule = $refrenceObject
@@ -424,7 +424,7 @@ Function Compare-RegistryRule
                 $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
                 $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
                 $_.AccessControlType -eq $refrenceObject.AccessControlType -and
-                $_.IdentityReference -eq $refrenceObject.IdentityReference
+                $_.IdentityReference.Value -eq $refrenceObject.IdentityReference.Value
             })
         if ($match.Count -gt 0)
         {

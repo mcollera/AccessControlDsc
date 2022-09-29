@@ -103,7 +103,7 @@ Please check out common DSC Resources [contributing guidelines](
 
     * **[String] Ensure:** Whether the rights should be present or absent. _{ Ensure | Present }_
 
-    * **[String] Inheritance:** Indicates the inheritance type of the permission entry.
+    * **[String] Inheritance:** Indicates the inheritance type of the permission entry. _{ This folder only | This folder subfolders and files | This folder and subfolders | This folder and files | Subfolders and files only | Subfolders only | Files only }_
 
   * **[String] ForcePrincipal:** Indicates whether the rights for this principal should be forced.  Will remove any rights not explicitly defined in the configuration for the principal.
 
