@@ -52,6 +52,15 @@ function Resolve-Identity
             if ($Identity -match '^S-\d-(\d+-){1,14}\d+$')
             {
                 [System.Security.Principal.SecurityIdentifier]$Identity = $Identity
+
+                # Support for capability sids
+                if ($Identity.Value.StartsWith('S-1-15-3-'))
+                {
+                    return [PSCustomObject]@{
+                        Name = $Identity.Value
+                        SID = $Identity.Value
+                    }
+                }
             }
             else
             {

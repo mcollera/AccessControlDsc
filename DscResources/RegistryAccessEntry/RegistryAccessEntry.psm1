@@ -382,7 +382,7 @@ Function Compare-RegistryRule
                 $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
                 $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
                 $_.AccessControlType -eq $refrenceObject.AccessControlType -and
-                $_.IdentityReference -eq $refrenceObject.IdentityReference
+                $_.IdentityReference.Value -eq $refrenceObject.IdentityReference.Value
             })
         if ($match.Count -ge 1)
         {
@@ -407,7 +407,7 @@ Function Compare-RegistryRule
             $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
             $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
             $_.AccessControlType -eq $refrenceObject.AccessControlType -and
-            $_.IdentityReference -eq $refrenceObject.IdentityReference
+            $_.IdentityReference.Value -eq $refrenceObject.IdentityReference.Value
         })
         if($match.Count -eq 0)
         {
@@ -424,7 +424,7 @@ Function Compare-RegistryRule
                 $_.InheritanceFlags -eq $refrenceObject.InheritanceFlags -and
                 $_.PropagationFlags -eq $refrenceObject.PropagationFlags -and
                 $_.AccessControlType -eq $refrenceObject.AccessControlType -and
-                $_.IdentityReference -eq $refrenceObject.IdentityReference
+                $_.IdentityReference.Value -eq $refrenceObject.IdentityReference.Value
             })
         if ($match.Count -gt 0)
         {
